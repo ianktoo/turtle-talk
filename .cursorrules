@@ -14,7 +14,16 @@ Children's AI voice-chat app. A child speaks to Shelly, a friendly sea turtle, w
 ```
 OPENAI_API_KEY=...
 ANTHROPIC_API_KEY=...
-SPEECH_CHAT_PROVIDER=anthropic   # or "openai"
+
+# All model/voice settings — defaults are set in lib/speech/config.ts
+SPEECH_CHAT_PROVIDER=anthropic          # "anthropic" | "openai"
+SPEECH_ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+SPEECH_OPENAI_MODEL=gpt-4o-mini
+SPEECH_CHAT_MAX_TOKENS=256
+SPEECH_STT_MODEL=gpt-4o-mini-transcribe
+SPEECH_TTS_MODEL=gpt-4o-mini-tts
+SPEECH_TTS_VOICE=coral                  # alloy|ash|ballad|coral|echo|fable|nova|sage|shimmer|verse
+SPEECH_TTS_INSTRUCTIONS=...             # voice personality instructions for gpt-4o-mini-tts
 ```
 
 ## Directory Structure
@@ -40,6 +49,7 @@ app/
     useMissions.ts                ← localStorage-backed mission CRUD
 
 lib/speech/
+  config.ts                       ← Central model/voice config with env var overrides
   types.ts                        ← All shared types (see below)
   errors.ts                       ← SpeechServiceError, GuardrailBlockedError
   SpeechService.ts                ← Orchestrator: STT → guardrails → chat → guardrails → TTS
@@ -86,20 +96,21 @@ Response JSON:
 All providers implement simple interfaces from `lib/speech/types.ts`. Swap via `SPEECH_CHAT_PROVIDER` env var or by passing a different provider to `SpeechService`.
 
 ### STT — `OpenAISTTProvider`
-- Model: `whisper-1`
+- Model: `gpt-4o-mini-transcribe` (override: `SPEECH_STT_MODEL`)
 - Input: `Blob` (audio/webm from MediaRecorder)
 - Output: transcribed `string`
 - Interface: `STTProvider { transcribe(audio: Blob): Promise<string> }`
 
 ### TTS — `OpenAITTSProvider`
-- Model: `tts-1`, voice: `nova`, format: `mp3`
+- Model: `gpt-4o-mini-tts`, voice: `coral`, format: `mp3` (overrides: `SPEECH_TTS_MODEL`, `SPEECH_TTS_VOICE`, `SPEECH_TTS_INSTRUCTIONS`)
+- Passes a `instructions` string to control Shelly's voice personality and pacing
 - Input: `string`
 - Output: `ArrayBuffer` (decoded by Web Audio API on the client)
 - Interface: `TTSProvider { synthesize(text: string): Promise<ArrayBuffer> }`
 
 ### Chat — `AnthropicChatProvider` / `OpenAIChatProvider`
-- Anthropic: `claude-haiku-4-5-20251001`, maxTokens: 256 (default)
-- OpenAI: `gpt-4o-mini`, maxTokens: 256 (fallback)
+- Anthropic: `claude-haiku-4-5-20251001`, maxTokens: 256 (overrides: `SPEECH_ANTHROPIC_MODEL`, `SPEECH_CHAT_MAX_TOKENS`)
+- OpenAI: `gpt-4o-mini`, maxTokens: 256 (overrides: `SPEECH_OPENAI_MODEL`, `SPEECH_CHAT_MAX_TOKENS`)
 - Both extend `BaseChatProvider` which handles message history formatting via LangChain
 - Interface: `ChatProvider { chat(input: string, ctx: ConversationContext): Promise<ChatResponse> }`
 - History is passed as alternating `HumanMessage` / `SystemMessage` (note: assistant turns use `SystemMessage` — intentional LangChain quirk)

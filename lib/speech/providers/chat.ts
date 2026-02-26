@@ -3,6 +3,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { ChatProvider, ChatResponse, ConversationContext, MissionSuggestion, MissionTheme, TurtleMood } from '../types';
+import { speechConfig } from '../config';
 
 const SHELLY_SYSTEM_PROMPT = `You are Shelly, a friendly and wise sea turtle who loves talking with children aged 4-10.
 Your rules:
@@ -83,9 +84,9 @@ export class AnthropicChatProvider extends BaseChatProvider {
   constructor(apiKey?: string) {
     super(
       new ChatAnthropic({
-        model: 'claude-haiku-4-5-20251001',
+        model: speechConfig.chat.anthropicModel,
         apiKey: apiKey ?? process.env.ANTHROPIC_API_KEY,
-        maxTokens: 256,
+        maxTokens: speechConfig.chat.maxTokens,
       }),
     );
   }
@@ -95,9 +96,9 @@ export class OpenAIChatProvider extends BaseChatProvider {
   constructor(apiKey?: string) {
     super(
       new ChatOpenAI({
-        model: 'gpt-4o-mini',
+        model: speechConfig.chat.openaiModel,
         apiKey: apiKey ?? process.env.OPENAI_API_KEY,
-        maxTokens: 256,
+        maxTokens: speechConfig.chat.maxTokens,
       }),
     );
   }

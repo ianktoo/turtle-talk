@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { toFile } from 'openai/uploads';
 import type { STTProvider } from '../types';
+import { speechConfig } from '../config';
 
 export class OpenAISTTProvider implements STTProvider {
   private client: OpenAI;
@@ -16,7 +17,7 @@ export class OpenAISTTProvider implements STTProvider {
 
     const transcription = await this.client.audio.transcriptions.create({
       file,
-      model: 'whisper-1',
+      model: speechConfig.stt.model,
     });
 
     return transcription.text;

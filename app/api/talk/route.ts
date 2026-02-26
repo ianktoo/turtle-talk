@@ -6,6 +6,7 @@ import { createChatProvider } from '@/lib/speech/providers/chat';
 import { ChildSafeGuardrail } from '@/lib/speech/guardrails/ChildSafeGuardrail';
 import type { ConversationContext, Message } from '@/lib/speech/types';
 import { SpeechServiceError } from '@/lib/speech/errors';
+import { speechConfig } from '@/lib/speech/config';
 
 export async function POST(req: NextRequest) {
   let formData: FormData;
@@ -34,11 +35,9 @@ export async function POST(req: NextRequest) {
   const context: ConversationContext = { messages };
 
   try {
-    const providerName = (process.env.SPEECH_CHAT_PROVIDER ?? 'anthropic') as 'anthropic' | 'openai';
-
     const stt = new OpenAISTTProvider();
     const tts = new OpenAITTSProvider();
-    const chat = createChatProvider(providerName);
+    const chat = createChatProvider(speechConfig.chat.provider);
     const guardrail = new ChildSafeGuardrail();
 
     const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });
