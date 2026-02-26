@@ -12,15 +12,170 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ============================================
+   HOME PAGE – DAY / NIGHT SCENE ANIMATIONS
+   Cycle duration: 24s
+   0–35%   : Day
+   35–50%  : Sunset
+   50–85%  : Night
+   85–100% : Dawn → Day
+   ============================================ */
+
+/* Sky layers */
+@keyframes showDay {
+  0%, 30%  { opacity: 1; }
+  42%, 83% { opacity: 0; }
+  95%, 100%{ opacity: 1; }
+}
+
+@keyframes showSunset {
+  0%, 28%  { opacity: 0; }
+  38%, 46% { opacity: 1; }
+  54%, 83% { opacity: 0; }
+  90%, 96% { opacity: 1; }
+  100%     { opacity: 0; }
+}
+
+@keyframes showNight {
+  0%, 44%  { opacity: 0; }
+  54%, 82% { opacity: 1; }
+  93%, 100%{ opacity: 0; }
+}
+
+/* Sun arc: left horizon → zenith → right horizon (0–42% of cycle) */
+@keyframes sunArc {
+  0%   { left: -80px; top: 68%; opacity: 0; }
+  5%   { opacity: 1; top: 55%; }
+  12%  { top: 35%; }
+  21%  { left: 50%;  top: 10%; }
+  30%  { top: 35%; }
+  37%  { top: 55%; opacity: 1; }
+  44%  { left: calc(100% + 80px); top: 68%; opacity: 0; }
+  100% { left: -80px; top: 68%; opacity: 0; }
+}
+
+/* Moon arc: same path but delayed to night window (50–87%) */
+@keyframes moonArc {
+  0%, 48%  { left: -70px; top: 68%; opacity: 0; }
+  55%      { opacity: 1; top: 55%; }
+  62%      { top: 35%; }
+  68%      { left: 50%;  top: 12%; }
+  76%      { top: 35%; }
+  83%      { top: 55%; opacity: 1; }
+  89%      { left: calc(100% + 70px); top: 68%; opacity: 0; }
+  100%     { left: -70px; top: 68%; opacity: 0; }
+}
+
+/* Stars fade with night */
+@keyframes starsFade {
+  0%, 46% { opacity: 0; }
+  56%, 82% { opacity: 1; }
+  92%, 100%{ opacity: 0; }
+}
+
+/* Individual star twinkle */
+@keyframes twinkle {
+  0%, 100% { transform: scale(1);   opacity: inherit; }
+  50%       { transform: scale(1.6); opacity: 0.5; }
+}
+
+/* Cloud drift */
+@keyframes cloudDrift1 {
+  from { transform: translateX(-280px); }
+  to   { transform: translateX(calc(100vw + 280px)); }
+}
+@keyframes cloudDrift2 {
+  from { transform: translateX(-220px); }
+  to   { transform: translateX(calc(100vw + 220px)); }
+}
+
+/* Ocean wave shimmer */
+@keyframes waveShift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-40px); }
+}
+
+/* Turtle floating bob */
+@keyframes turtleBob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-14px) rotate(4deg); }
+}
+
+/* Button gentle pulse to invite taps */
+@keyframes btnPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.035); }
+}
+
+/* ============================================
+   TALK PAGE – TURTLE MOOD ANIMATIONS
+   ============================================ */
+
+@keyframes moodIdle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+@keyframes moodListening {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(2deg); }
+}
+
+@keyframes moodTalking {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+@keyframes talkMouth {
+  0%, 100% { ry: 4; }
+  50%      { ry: 10; }
+}
+
+@keyframes moodHappy {
+  0%   { transform: translateY(0) scale(1); }
+  30%  { transform: translateY(-14px) scale(1.05); }
+  60%  { transform: translateY(-4px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes moodSad {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+
+@keyframes moodConfused {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-8deg); }
+}
+
+@keyframes moodSurprised {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.12); }
+  50%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulseRing {
+  0%   { opacity: 0.6; transform: scale(0.95); }
+  70%  { opacity: 0; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* Mood class animations applied to the SVG element */
+.mood-idle      { animation: moodIdle 3s ease-in-out infinite; }
+.mood-listening { animation: moodListening 2s ease-in-out infinite; }
+.mood-talking   { animation: moodTalking 0.4s ease-in-out infinite; }
+.mood-happy     { animation: moodHappy 0.6s ease-in-out; }
+.mood-sad       { animation: moodSad 2.5s ease-in-out infinite; }
+.mood-confused  { animation: moodConfused 2s ease-in-out infinite; }
+.mood-surprised { animation: moodSurprised 0.3s ease-out forwards; }
+
+/* Talking mouth ellipse animation */
+.talk-mouth { animation: talkMouth 0.3s ease-in-out infinite; }
+
+/* Listening pulse ring */
+.pulse-ring { animation: pulseRing 1.5s ease-out infinite; transform-origin: center; }
