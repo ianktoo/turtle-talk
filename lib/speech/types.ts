@@ -62,10 +62,14 @@ export interface SpeechServiceConfig {
   guardrails?: GuardrailAgent[];
 }
 
-export interface ProcessResult {
+/** Result of STT + guardrails + chat — no audio yet */
+export interface TextProcessResult {
   userText: string;
   responseText: string;
-  responseAudio: ArrayBuffer;
   mood: TurtleMood;
   mission?: MissionSuggestion;
+}
+
+export interface ProcessResult extends TextProcessResult {
+  responseAudio: ArrayBuffer;
 }

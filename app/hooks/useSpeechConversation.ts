@@ -29,8 +29,8 @@ interface UseSpeechConversationResult {
 }
 
 const VAD_THRESHOLD = 15;
-const VAD_START_MS = 300;
-const VAD_STOP_MS = 1500;
+const VAD_START_MS = 150;
+const VAD_STOP_MS = 600;
 const POLL_INTERVAL_MS = 100;
 
 export function useSpeechConversation(
@@ -85,6 +85,26 @@ export function useSpeechConversation(
     }
   }, []);
 
+  const playAudio = useCallback(
+    async (base64: string) => {
+      const audioData = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const playCtx = new AudioContext();
+      const decoded = await playCtx.decodeAudioData(audioData.buffer);
+      const source = playCtx.createBufferSource();
+      source.buffer = decoded;
+      source.connect(playCtx.destination);
+      source.start();
+      source.onended = () => {
+        playCtx.close();
+        if (stateRef.current !== 'ended' && stateRef.current !== 'muted') {
+          setStateSync('listening');
+          setMood('listening');
+        }
+      };
+    },
+    [setStateSync],
+  );
+
   const sendAudio = useCallback(
     async (blob: Blob) => {
       setStateSync('processing');
@@ -100,42 +120,50 @@ export function useSpeechConversation(
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error ?? `HTTP ${res.status}`);
         }
+        if (!res.body) throw new Error('No response body');
 
-        const data = await res.json();
-        const { userText, responseText, responseAudioBase64, mood: responseMood, mission } = data;
+        // Stream NDJSON — two events:
+        //   {type:'meta', userText, responseText, mood, mission?}  ← arrives after LLM
+        //   {type:'audio', base64}                                  ← arrives after TTS
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        if (mission) {
-          onMission?.(mission);
-        }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        // Update conversation history
-        const newMessages: Message[] = [
-          ...messagesRef.current,
-          { role: 'user', content: userText },
-          { role: 'assistant', content: responseText },
-        ];
-        setMessages(newMessages);
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
 
-        // Decode and play audio
-        setStateSync('speaking');
-        setMood(responseMood ?? 'talking');
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const event = JSON.parse(line) as Record<string, unknown>;
 
-        const audioData = Uint8Array.from(atob(responseAudioBase64), (c) => c.charCodeAt(0));
-        const audioBuffer = audioData.buffer;
+            if (event.type === 'meta') {
+              const { userText, responseText, mood: responseMood, mission } = event as {
+                userText: string; responseText: string; mood: TurtleMood; mission?: unknown;
+              };
 
-        const playCtx = new AudioContext();
-        const decoded = await playCtx.decodeAudioData(audioBuffer);
-        const source = playCtx.createBufferSource();
-        source.buffer = decoded;
-        source.connect(playCtx.destination);
-        source.start();
-        source.onended = () => {
-          playCtx.close();
-          if (stateRef.current !== 'ended' && stateRef.current !== 'muted') {
-            setStateSync('listening');
-            setMood('listening');
+              if (mission) onMission?.(mission as Parameters<typeof onMission>[0]);
+
+              setMessages([
+                ...messagesRef.current,
+                { role: 'user', content: userText },
+                { role: 'assistant', content: responseText },
+              ]);
+
+              // Update turtle face immediately — before audio is ready
+              setStateSync('speaking');
+              setMood(responseMood ?? 'talking');
+            } else if (event.type === 'audio') {
+              await playAudio(event.base64 as string);
+            } else if (event.type === 'error') {
+              throw new Error(event.error as string);
+            }
           }
-        };
+        }
       } catch (err) {
         console.error('[useSpeechConversation] sendAudio error:', err);
         setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -143,7 +171,7 @@ export function useSpeechConversation(
         setMood('listening');
       }
     },
-    [setStateSync, onMission],
+    [setStateSync, onMission, playAudio],
   );
 
   const stopRecording = useCallback(() => {

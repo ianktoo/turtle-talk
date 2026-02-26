@@ -1,31 +1,61 @@
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import type { ChatProvider, ChatResponse, ConversationContext, MissionSuggestion, MissionTheme, TurtleMood } from '../types';
 import { speechConfig } from '../config';
 
 const SHELLY_SYSTEM_PROMPT = `You are Shelly, a friendly and wise sea turtle who loves talking with children aged 4-10.
-Your rules:
+Rules:
 - Always be kind, gentle, and encouraging
 - Keep responses SHORT: 2-3 sentences maximum
 - Use simple words that young children understand
 - Never discuss violence, adult topics, or anything scary
 - Be curious, playful, and warm
-- Respond ONLY with valid JSON in this exact format:
-{"text": "your response here", "mood": "one of: idle|listening|talking|happy|sad|confused|surprised"}
 
-Choose the mood that best matches your response:
-- happy: when sharing good news, fun facts, or expressing joy
-- sad: when expressing empathy or talking about something unfortunate
-- confused: when the topic is unclear or you need clarification
-- surprised: when something is exciting or unexpected
-- talking: default when speaking normally
+Mood guidance — pick the one that best fits:
+- happy: good news, fun facts, joy
+- sad: empathy, unfortunate topics
+- confused: unclear topic, need clarification
+- surprised: exciting or unexpected
+- talking: default
 
-MISSIONS: When you identify a personal challenge the child could grow from (e.g. being shy, dealing with a fear, making friends, being brave, staying calm, being kind), suggest a mission by adding a "mission" field to your JSON. Only suggest a mission occasionally — not every response. Keep the description friendly and actionable for a young child.
-Example with mission: {"text": "...", "mood": "happy", "mission": {"title": "Say Hello to Someone New", "description": "Try saying hi to one new person today!", "theme": "social"}}
-Theme must be one of: brave|kind|calm|confident|creative|social|curious`;
+Mission guidance: Only suggest a mission when you clearly identify a personal challenge the child could grow from (shyness, fear, social difficulty, emotional regulation). Not every turn needs a mission.`;
 
+/** JSON-schema function definition used for structured output (works with both Anthropic and OpenAI via LangChain) */
+const RESPONSE_SCHEMA = {
+  name: 'shellyResponse',
+  description: "Shelly the turtle's response",
+  parameters: {
+    type: 'object',
+    properties: {
+      text: {
+        type: 'string',
+        description: "Shelly's spoken response — 2-3 short sentences",
+      },
+      mood: {
+        type: 'string',
+        enum: ['idle', 'listening', 'talking', 'happy', 'sad', 'confused', 'surprised'],
+      },
+      mission: {
+        type: 'object',
+        description: 'Optional mission — include only when a meaningful personal challenge is identified',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string', description: 'Friendly, actionable for a young child' },
+          theme: {
+            type: 'string',
+            enum: ['brave', 'kind', 'calm', 'confident', 'creative', 'social', 'curious'],
+          },
+        },
+        required: ['title', 'description', 'theme'],
+      },
+    },
+    required: ['text', 'mood'],
+  },
+};
+
+const VALID_MOODS: TurtleMood[] = ['idle', 'listening', 'talking', 'happy', 'sad', 'confused', 'surprised'];
 const VALID_THEMES: MissionTheme[] = ['brave', 'kind', 'calm', 'confident', 'creative', 'social', 'curious'];
 
 function parseMission(raw: unknown): MissionSuggestion | undefined {
@@ -38,19 +68,6 @@ function parseMission(raw: unknown): MissionSuggestion | undefined {
   return { title: m.title, description: m.description, theme };
 }
 
-function parseChatResponse(raw: string): ChatResponse {
-  try {
-    const json = JSON.parse(raw.trim());
-    const validMoods: TurtleMood[] = ['idle', 'listening', 'talking', 'happy', 'sad', 'confused', 'surprised'];
-    const mood: TurtleMood = validMoods.includes(json.mood) ? json.mood : 'happy';
-    const mission = parseMission(json.mission);
-    return { text: String(json.text ?? ''), mood, mission };
-  } catch {
-    // If JSON parse fails, treat the whole response as text
-    return { text: raw.trim(), mood: 'happy' };
-  }
-}
-
 abstract class BaseChatProvider implements ChatProvider {
   protected model: BaseChatModel;
 
@@ -60,23 +77,28 @@ abstract class BaseChatProvider implements ChatProvider {
 
   async chat(input: string, ctx: ConversationContext): Promise<ChatResponse> {
     const systemContent = ctx.childName
-      ? `${SHELLY_SYSTEM_PROMPT}\n\nThe child's name is ${ctx.childName}. Use their name occasionally to make it personal.`
+      ? `${SHELLY_SYSTEM_PROMPT}\n\nThe child's name is ${ctx.childName}. Use their name occasionally.`
       : SHELLY_SYSTEM_PROMPT;
 
     const messages = [
       new SystemMessage(systemContent),
       ...ctx.messages.map((m) =>
-        m.role === 'user' ? new HumanMessage(m.content) : new SystemMessage(m.content),
+        m.role === 'user' ? new HumanMessage(m.content) : new AIMessage(m.content),
       ),
       new HumanMessage(input),
     ];
 
-    const response = await this.model.invoke(messages);
-    const raw = typeof response.content === 'string'
-      ? response.content
-      : JSON.stringify(response.content);
+    // withStructuredOutput uses tool_use/function_calling — the model never produces raw JSON text,
+    // so it can't leak "json" into the spoken response.
+    const structured = this.model.withStructuredOutput(RESPONSE_SCHEMA);
+    const result = await structured.invoke(messages) as Record<string, unknown>;
 
-    return parseChatResponse(raw);
+    const mood: TurtleMood = VALID_MOODS.includes(result.mood as TurtleMood)
+      ? (result.mood as TurtleMood)
+      : 'happy';
+    const mission = parseMission(result.mission);
+
+    return { text: String(result.text ?? ''), mood, mission };
   }
 }
 

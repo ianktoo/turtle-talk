@@ -1,4 +1,4 @@
-import type { SpeechServiceConfig, ConversationContext, ProcessResult, TurtleMood, ChatResponse } from './types';
+import type { SpeechServiceConfig, ConversationContext, ProcessResult, TextProcessResult, TurtleMood, ChatResponse } from './types';
 import type { GuardrailAgent } from './guardrails/types';
 import { SpeechServiceError, GuardrailBlockedError } from './errors';
 
@@ -65,6 +65,53 @@ export class SpeechService {
       }
     }
     return current;
+  }
+
+  /** Steps 1–4: STT → input guardrails → chat → output guardrails. No TTS. */
+  async processToText(audio: Blob, context: ConversationContext): Promise<TextProcessResult> {
+    // 1. STT
+    let userText: string;
+    try {
+      userText = await this.stt.transcribe(audio);
+    } catch (err) {
+      throw new SpeechServiceError('Speech-to-text failed', 'stt', err);
+    }
+
+    // 2. Input guardrails
+    try {
+      await this.runInputGuardrails(userText);
+    } catch (err) {
+      if (err instanceof GuardrailBlockedError) {
+        return { userText, responseText: FALLBACK_RESPONSE, mood: FALLBACK_MOOD };
+      }
+      throw err;
+    }
+
+    // 3. Chat
+    let chatResponse: ChatResponse;
+    try {
+      chatResponse = await this.chat.chat(userText, context);
+    } catch (err) {
+      throw new SpeechServiceError('Chat provider failed', 'chat', err);
+    }
+
+    // 4. Output guardrails
+    let safeResponseText: string;
+    try {
+      safeResponseText = await this.runOutputGuardrails(chatResponse.text);
+    } catch (err) {
+      if (err instanceof GuardrailBlockedError) {
+        return { userText, responseText: FALLBACK_RESPONSE, mood: FALLBACK_MOOD };
+      }
+      throw err;
+    }
+
+    return {
+      userText,
+      responseText: safeResponseText,
+      mood: chatResponse.mood,
+      mission: chatResponse.mission,
+    };
   }
 
   async process(audio: Blob, context: ConversationContext): Promise<ProcessResult> {
