@@ -1,0 +1,128 @@
+# Turtle Talk — Cursor Rules
+
+## Project Overview
+Children's AI voice-chat app. A child speaks to Shelly, a friendly sea turtle, who listens, responds with voice, and suggests personal growth missions (e.g. being brave, making friends, staying calm).
+
+## Tech Stack
+- **Next.js 16** (App Router), **React 19**, **TypeScript 5**
+- **Tailwind CSS v4** — use `@import "tailwindcss"` not `@tailwind` directives
+- **Radix UI Themes** (`@radix-ui/themes`) — available but used sparingly
+- **LangChain** (`@langchain/anthropic`, `@langchain/openai`) — for AI chat
+- **Jest 30** + `babel-jest` + `jest-environment-jsdom` — test runner
+
+## Environment Variables (`.env.local`)
+```
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+SPEECH_CHAT_PROVIDER=anthropic   # or "openai"
+```
+
+## Directory Structure
+```
+app/
+  page.tsx                        ← Home page (animated ocean scene + nav)
+  layout.tsx                      ← Root layout: Scene bg + Radix Theme wrapper
+  globals.css                     ← Tailwind v4, keyframe animations (day/night, turtle bob, moods)
+  talk/page.tsx                   ← Conversation page (mic permission → VAD → talk loop)
+  missions/page.tsx               ← Missions page (Active / Completed tabs)
+  api/talk/route.ts               ← POST /api/talk — audio in, {userText, responseText, audio, mood, mission} out
+  components/
+    Scene.tsx                     ← Animated ocean background (fixed, z-0)
+    VersionBadge.tsx              ← Small version badge
+    talk/
+      TurtleCharacter.tsx         ← SVG turtle with 7 mood states + CSS animation classes
+      MuteButton.tsx              ← 56px+ green/red mic toggle
+      EndButton.tsx               ← 56px+ red end button
+      MicPermission.tsx           ← Full-screen permission request card
+  hooks/
+    useMicPermission.ts           ← checking | prompt | granted | denied
+    useSpeechConversation.ts      ← VAD state machine + API calls + audio playback
+    useMissions.ts                ← localStorage-backed mission CRUD
+
+lib/speech/
+  types.ts                        ← All shared types (see below)
+  errors.ts                       ← SpeechServiceError, GuardrailBlockedError
+  SpeechService.ts                ← Orchestrator: STT → guardrails → chat → guardrails → TTS
+  index.ts                        ← Barrel export
+  providers/
+    chat.ts                       ← AnthropicChatProvider (haiku-4-5) / OpenAIChatProvider (gpt-4o-mini)
+    stt.ts                        ← OpenAISTTProvider (whisper-1)
+    tts.ts                        ← OpenAITTSProvider (nova, mp3)
+  guardrails/
+    types.ts                      ← GuardrailAgent interface, GuardrailResult
+    ChildSafeGuardrail.ts         ← Regex/keyword fast check (always-on)
+    LLMGuardrail.ts               ← Stub for LLM-based check
+
+__tests__/
+  components/talk/                ← TurtleCharacter, MuteButton, EndButton, MicPermission
+  services/                       ← SpeechService, guardrails
+```
+
+## Key Types (`lib/speech/types.ts`)
+```ts
+type TurtleMood = 'idle' | 'listening' | 'talking' | 'happy' | 'sad' | 'confused' | 'surprised'
+type MissionTheme = 'brave' | 'kind' | 'calm' | 'confident' | 'creative' | 'social' | 'curious'
+
+interface Mission {
+  id: string; title: string; description: string; theme: MissionTheme;
+  status: 'active' | 'completed'; createdAt: string; completedAt?: string;
+}
+interface MissionSuggestion { title: string; description: string; theme: MissionTheme; }
+interface Message { role: 'user' | 'assistant'; content: string; }
+interface ProcessResult { userText; responseText; responseAudio: ArrayBuffer; mood; mission?: MissionSuggestion; }
+```
+
+## API Contract
+**POST `/api/talk`** — `multipart/form-data`
+- `audio`: Blob (webm)
+- `messages`: JSON string of `Message[]`
+
+Response JSON:
+```json
+{ "userText": "...", "responseText": "...", "responseAudioBase64": "...", "mood": "happy", "mission": null | { "title": "...", "description": "...", "theme": "brave" } }
+```
+
+## Shelly AI Persona
+- Friendly sea turtle, talks to children aged 4–10
+- Responses are 2–3 sentences max, simple language
+- Returns JSON: `{ "text": "...", "mood": "...", "mission": { ... } | omitted }`
+- Suggests a mission (optional) when she identifies a personal challenge
+- Default model: `claude-haiku-4-5-20251001` (Anthropic), fallback: `gpt-4o-mini` (OpenAI)
+
+## VAD State Machine (`useSpeechConversation`)
+```
+idle → startListening() → listening → (voice detected) → recording → (silence) → processing → speaking → listening
+                                                                                   ↓ onMission?.(mission)
+```
+- `onEnd` callback → navigates to `/missions`
+- `onMission` callback → saves mission via `useMissions.addMission`
+
+## Missions Flow
+1. Shelly's chat response optionally includes a `mission` object
+2. API route passes it through to the client
+3. `useSpeechConversation` fires `onMission` when present
+4. `useMissions` hook stores missions in `localStorage` under key `turtle-talk-missions`
+5. `/missions` page shows Active / Completed tabs; "✓ Done!" marks complete
+
+## Styling Conventions
+- All pages: `position: relative; z-index: 10; min-height: 100vh` to render above the Scene background
+- Inline styles are used throughout (consistent with existing codebase) — prefer inline styles over new Tailwind classes for new components
+- Color palette: white text, `rgba(255,255,255,0.x)` for tinted surfaces, ocean blues
+- Drop shadows on text: `textShadow: '0 2px 8px rgba(0,0,0,0.4)'`
+- Backdrop blur on cards/buttons: `backdropFilter: 'blur(8px)'`
+- Buttons: min 56px touch target for interactive controls in the talk UI
+- Tailwind v4 is available for utility classes (e.g. `className="relative z-10 ..."`
+
+## Testing Notes
+- SVG `className` in jsdom returns `SVGAnimatedString` — use `element.getAttribute('class')` not `.className`
+- Path alias `@/*` resolves to project root (not `src/`)
+- `jest.config.ts` uses `setupFilesAfterEnv` (not `setupFilesAfterFramework`)
+- Run tests: `npm test`
+
+## Commands
+```bash
+npm run dev      # dev server on :3000
+npm run build    # production build
+npm test         # Jest (63 tests)
+npx tsc --noEmit # type-check only
+```
