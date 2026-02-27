@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { SpeechService } from '@/lib/speech/SpeechService';
 import { OpenAISTTProvider } from '@/lib/speech/providers/stt';
-import { OpenAITTSProvider } from '@/lib/speech/providers/tts';
+import { ElevenLabsTTSProvider } from '@/lib/speech/providers/tts';
 import { createChatProvider } from '@/lib/speech/providers/chat';
 import { ChildSafeGuardrail } from '@/lib/speech/guardrails/ChildSafeGuardrail';
 import type { ConversationContext, Message } from '@/lib/speech/types';
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const context: ConversationContext = { messages };
 
   const stt = new OpenAISTTProvider();
-  const tts = new OpenAITTSProvider();
+  const tts = new ElevenLabsTTSProvider();
   const chat = createChatProvider(speechConfig.chat.provider);
   const guardrail = new ChildSafeGuardrail();
   const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });

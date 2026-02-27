@@ -10,6 +10,7 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.36.0",
     "@langchain/anthropic": "^0.3.34",
     "@langchain/community": "^0.3.59",
     "@langchain/openai": "^0.3.17",

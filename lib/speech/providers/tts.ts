@@ -1,24 +1,30 @@
-import OpenAI from 'openai';
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import type { TTSProvider } from '../types';
 import { speechConfig } from '../config';
 
-export class OpenAITTSProvider implements TTSProvider {
-  private client: OpenAI;
+export class ElevenLabsTTSProvider implements TTSProvider {
+  private client: ElevenLabsClient;
 
   constructor(apiKey?: string) {
-    this.client = new OpenAI({ apiKey: apiKey ?? process.env.OPENAI_API_KEY });
+    this.client = new ElevenLabsClient({
+      apiKey: apiKey ?? process.env.ELEVENLABS_API_KEY,
+    });
   }
 
   async synthesize(text: string): Promise<ArrayBuffer> {
-    const response = await this.client.audio.speech.create({
-      model: speechConfig.tts.model,
-      voice: speechConfig.tts.voice as Parameters<typeof this.client.audio.speech.create>[0]['voice'],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...(speechConfig.tts.instructions ? { instructions: speechConfig.tts.instructions } as any : {}),
-      input: text,
-      response_format: 'mp3',
+    const stream = await this.client.textToSpeech.convert(speechConfig.tts.voiceId, {
+      text,
+      modelId: speechConfig.tts.model,
+      outputFormat: speechConfig.tts.outputFormat,
     });
 
-    return response.arrayBuffer();
+    const reader = stream.getReader();
+    const chunks: Buffer[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks).buffer;
   }
 }

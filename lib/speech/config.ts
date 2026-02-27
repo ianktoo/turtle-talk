@@ -7,11 +7,9 @@ export const speechConfig = {
     model: process.env.SPEECH_STT_MODEL ?? 'gpt-4o-mini-transcribe',
   },
   tts: {
-    model: process.env.SPEECH_TTS_MODEL ?? 'gpt-4o-mini-tts',
-    voice: process.env.SPEECH_TTS_VOICE ?? 'coral',
-    instructions:
-      process.env.SPEECH_TTS_INSTRUCTIONS ??
-      'You are Shelly, a warm and gentle sea turtle. Speak slowly and clearly with a calm, nurturing tone — playful and encouraging, as if talking to a young child aged 4 to 10.',
+    voiceId: process.env.ELEVENLABS_VOICE_ID ?? '9BWtsMINqrJLrRacOk9x', // Aria
+    model: process.env.ELEVENLABS_MODEL ?? 'eleven_turbo_v2_5',
+    outputFormat: 'mp3_44100_128' as const,
   },
   chat: {
     provider: (process.env.SPEECH_CHAT_PROVIDER ?? 'anthropic') as 'anthropic' | 'openai',
