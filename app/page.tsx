@@ -29,7 +29,7 @@ export default function Home() {
           textAlign: "center",
         }}
       >
-        Turtle Talk
+        TurtleTalk
       </h1>
 
       <p
@@ -98,6 +98,34 @@ export default function Home() {
             <span style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.2 }}>
               <span>Feed Turtle</span>
               <span style={{ fontSize: "0.85rem", fontWeight: 500, opacity: 0.85 }}>Complete missions!</span>
+            </span>
+          </button>
+        </Link>
+
+        <Link href="/world" style={{ width: "100%", textDecoration: "none" }}>
+          <button
+            style={{
+              width: "100%",
+              padding: "18px 24px",
+              borderRadius: 24,
+              border: "none",
+              background: "linear-gradient(135deg, #0e7490, #06b6d4)",
+              color: "white",
+              fontSize: "1.35rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              boxShadow: "0 6px 24px rgba(6,182,212,0.45)",
+              animation: "btnPulse 3s ease-in-out infinite",
+              animationDelay: "3s",
+            }}
+          >
+            <span style={{ fontSize: "1.8rem" }}>🌿</span>
+            <span style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.2 }}>
+              <span>My Garden</span>
+              <span style={{ fontSize: "0.85rem", fontWeight: 500, opacity: 0.85 }}>See your brave acts!</span>
             </span>
           </button>
         </Link>
