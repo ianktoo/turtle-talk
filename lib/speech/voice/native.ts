@@ -163,7 +163,7 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
     if (opts.childName) formData.append('childName', opts.childName);
     if (opts.topics?.length) formData.append('topics', JSON.stringify(opts.topics));
     if (opts.difficultyProfile) formData.append('difficultyProfile', opts.difficultyProfile);
-    if (opts.missionDeclined) formData.append('missionDeclined', 'true');
+    if (opts.activeMission) formData.append('activeMission', JSON.stringify(opts.activeMission));
 
     try {
       const res = await fetch('/api/talk', { method: 'POST', body: formData });

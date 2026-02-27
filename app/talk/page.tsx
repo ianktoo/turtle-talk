@@ -26,17 +26,23 @@ const STATE_LABELS: Record<string, string> = {
 
 function ConversationView() {
   const router = useRouter();
-  const { addMission, completedMissions } = useMissions();
+  const { addMission, completedMissions, activeMissions } = useMissions();
   const { childName, messages: savedMessages, topics, saveChildName, saveMessages, saveTopic } =
     usePersonalMemory();
 
   const [pendingMissionChoices, setPendingMissionChoices] = useState<MissionSuggestion[] | null>(null);
-  const [missionDeclined, setMissionDeclined] = useState(false);
+
+  // Use a ref so the onEnd callback always reads the latest value without needing re-registration
+  const pendingChoicesRef = useRef<MissionSuggestion[] | null>(null);
+  pendingChoicesRef.current = pendingMissionChoices;
 
   const difficultyProfile: 'beginner' | 'intermediate' | 'confident' =
     completedMissions.length >= 5 ? 'confident'
     : completedMissions.length >= 2 ? 'intermediate'
     : 'beginner';
+
+  // The child's first active mission, if any — passed to the agent for coaching
+  const activeMission = activeMissions[0] ?? null;
 
   // Stable provider instance — one per mount
   const providerRef = useRef<NativeVoiceProvider | null>(null);
@@ -44,7 +50,8 @@ function ConversationView() {
 
   const { state, mood, messages, isMuted, error, toggleMute, endConversation, startListening } =
     useVoiceSession(providerRef.current, {
-      onEnd: () => router.push('/missions'),
+      // If missions are pending, don't navigate immediately — MissionSelectView handles it
+      onEnd: () => { if (!pendingChoicesRef.current) router.push('/missions'); },
       onMissionChoices: setPendingMissionChoices,
       initialMessages: savedMessages,
       childName,
@@ -53,7 +60,7 @@ function ConversationView() {
       onTopic: saveTopic,
       onMessagesChange: saveMessages,
       difficultyProfile,
-      missionDeclined,
+      activeMission,
     });
 
   useEffect(() => {
@@ -68,11 +75,11 @@ function ConversationView() {
         onSelect={(choice) => {
           addMission(choice);
           setPendingMissionChoices(null);
-          setMissionDeclined(false);
+          router.push('/missions');
         }}
         onDismiss={() => {
           setPendingMissionChoices(null);
-          setMissionDeclined(true);
+          router.push('/missions');
         }}
       />
     );

@@ -120,6 +120,7 @@ export class SpeechService {
       endConversation: chatResponse.endConversation,
       childName: chatResponse.childName,
       topic: chatResponse.topic,
+      missionProgressNote: chatResponse.missionProgressNote,
     };
   }
 
@@ -181,6 +182,7 @@ export class SpeechService {
       endConversation: chatResponse.endConversation,
       childName: chatResponse.childName,
       topic: chatResponse.topic,
+      missionProgressNote: chatResponse.missionProgressNote,
     };
   }
 

@@ -1,6 +1,13 @@
 import { renderHook, act } from '@testing-library/react';
 import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
 
+// Pin childId to 'default' so the localStorage provider uses legacy key names
+// (turtle-talk-child-name, turtle-talk-messages, turtle-talk-topics) for backward compat.
+jest.mock('@/lib/db', () => ({
+  ...jest.requireActual('@/lib/db'),
+  getDeviceId: () => 'default',
+}));
+
 const KEY_NAME = 'turtle-talk-child-name';
 const KEY_MSGS = 'turtle-talk-messages';
 const KEY_TOPICS = 'turtle-talk-topics';

@@ -86,7 +86,7 @@ export function useVoiceSession(
       topics:            opts.topics,
       initialMessages:   opts.initialMessages,
       difficultyProfile: opts.difficultyProfile,
-      missionDeclined:   opts.missionDeclined,
+      activeMission:     opts.activeMission,
     });
   }, [provider]);
 

@@ -54,7 +54,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
           childName: options.childName ?? null,
           topics: options.topics ?? [],
           difficultyProfile: options.difficultyProfile ?? 'beginner',
-          missionDeclined: options.missionDeclined ?? false,
+          activeMission: options.activeMission ?? null,
         },
       },
       voice: {

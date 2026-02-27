@@ -30,10 +30,10 @@ export interface Message {
 export interface ConversationContext {
   messages: Message[];
   childName?: string;
-  offerMission?: boolean;
   topics?: string[];
   difficultyProfile?: 'beginner' | 'intermediate' | 'confident';
-  missionDeclined?: boolean;
+  /** The child's currently active challenge, if any. Passed to the agent each turn. */
+  activeMission?: Mission | null;
 }
 
 export interface STTProvider {
@@ -58,6 +58,8 @@ export interface ChatResponse {
   endConversation?: boolean;
   childName?: string;
   topic?: string;
+  /** Set when the agent called acknowledge_mission_progress — e.g. to show a UI celebration */
+  missionProgressNote?: string;
 }
 
 export interface ChatProvider {
@@ -80,6 +82,7 @@ export interface TextProcessResult {
   endConversation?: boolean;
   childName?: string;
   topic?: string;
+  missionProgressNote?: string;
 }
 
 export interface ProcessResult extends TextProcessResult {

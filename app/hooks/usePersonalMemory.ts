@@ -1,74 +1,73 @@
 'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import type { Message } from '@/lib/speech/types';
+import { getDb, getDeviceId } from '@/lib/db';
 
-const KEY_NAME = 'turtle-talk-child-name';
-const KEY_MSGS = 'turtle-talk-messages';
-const KEY_TOPICS = 'turtle-talk-topics';
-const MAX_MESSAGES = 20;
-const MAX_TOPICS = 15;
+export function usePersonalMemory(childId?: string) {
+  const id = childId ?? (typeof window !== 'undefined' ? getDeviceId() : 'default');
+  const db = getDb();
 
-function loadString(key: string): string | null {
-  if (typeof window === 'undefined') return null;
-  try { return localStorage.getItem(key); } catch { return null; }
-}
+  // Synchronous read for instant initial state (localStorage provider).
+  // Async providers return null here and populate via useEffect below.
+  const syncMem = db.getMemorySync?.(id) ?? null;
 
-function loadJSON<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
-}
+  const [childName, setChildName] = useState<string | null>(syncMem?.childName ?? null);
+  const [messages, setMessages] = useState<Message[]>((syncMem?.messages ?? []) as Message[]);
+  const [topics, setTopics] = useState<string[]>(syncMem?.topics ?? []);
 
-function persist(key: string, value: string): void {
-  try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
-}
-
-function removeKeys(...keys: string[]): void {
-  try { keys.forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ }
-}
-
-export function usePersonalMemory() {
-  const [childName, setChildName] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [topics, setTopics] = useState<string[]>([]);
-
+  // For async providers (Supabase, Convex): hydrate state after mount.
   useEffect(() => {
-    setChildName(loadString(KEY_NAME));
-    setMessages(loadJSON<Message[]>(KEY_MSGS, []));
-    setTopics(loadJSON<string[]>(KEY_TOPICS, []));
-  }, []);
+    if (syncMem !== null) return;
+    db.getMemory(id)
+      .then((mem) => {
+        setChildName(mem.childName);
+        setMessages(mem.messages as Message[]);
+        setTopics(mem.topics);
+      })
+      .catch(() => {/* keep defaults */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-  const saveChildName = useCallback((name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    setChildName(trimmed);
-    persist(KEY_NAME, trimmed);
-  }, []);
+  const saveChildName = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      setChildName(trimmed);
+      void db.saveChildName(id, trimmed).catch(() => {/* ignore */});
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id],
+  );
 
-  const saveMessages = useCallback((msgs: Message[]) => {
-    const trimmed = msgs.slice(-MAX_MESSAGES);
-    setMessages(trimmed);
-    persist(KEY_MSGS, JSON.stringify(trimmed));
-  }, []);
+  const saveMessages = useCallback(
+    (msgs: Message[]) => {
+      const trimmed = msgs.slice(-20);
+      setMessages(trimmed);
+      void db.saveMessages(id, trimmed).catch(() => {/* ignore */});
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id],
+  );
 
-  const saveTopic = useCallback((topic: string) => {
-    const normalised = topic.trim().toLowerCase();
-    if (!normalised) return;
-    setTopics((prev) => {
-      const deduped = [normalised, ...prev.filter((t) => t !== normalised)].slice(0, MAX_TOPICS);
-      persist(KEY_TOPICS, JSON.stringify(deduped));
-      return deduped;
-    });
-  }, []);
+  const saveTopic = useCallback(
+    (topic: string) => {
+      const normalised = topic.trim().toLowerCase();
+      if (!normalised) return;
+      setTopics((prev) => [normalised, ...prev.filter((t) => t !== normalised)].slice(0, 15));
+      void db.addTopic(id, normalised).catch(() => {/* ignore */});
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id],
+  );
 
   const clearAll = useCallback(() => {
-    removeKeys(KEY_NAME, KEY_MSGS, KEY_TOPICS);
     setChildName(null);
     setMessages([]);
     setTopics([]);
-  }, []);
+    void db.clearMemory(id).catch(() => {/* ignore */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   return { childName, messages, topics, saveChildName, saveMessages, saveTopic, clearAll };
 }

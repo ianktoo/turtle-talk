@@ -1,3 +1,20 @@
+/**
+ * Shelly — mission-aware conversation agent.
+ *
+ * Architecture: instead of a single withStructuredOutput blob, the agent
+ * uses individual bound tools so each concern is separate and inspectable:
+ *
+ *   report_mood              — required every turn (sets the turtle face)
+ *   propose_missions         — required when ending (3 graded challenges)
+ *   end_conversation         — signals conversation end (always with propose_missions)
+ *   acknowledge_mission_progress — optional, when child mentions their active challenge
+ *   note_child_info          — optional, records child's name and turn topic
+ *
+ * Missions are forced at every conversation end — no more random 30% mid-turn logic.
+ */
+
+import { z } from 'zod';
+import { tool } from '@langchain/core/tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
@@ -5,83 +22,155 @@ import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages
 import type { ChatProvider, ChatResponse, ConversationContext, MissionSuggestion, MissionTheme, TurtleMood } from '../types';
 import { speechConfig } from '../config';
 
-const SHELLY_SYSTEM_PROMPT = `You are Shelly, a friendly and wise sea turtle who loves talking with children aged 4-10.
-Rules:
-- Always be kind, gentle, and encouraging
-- Keep responses SHORT: 2-3 sentences maximum
-- Use simple words that young children understand
-- Never discuss violence, adult topics, or anything scary
-- Be curious, playful, and warm
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
 
-Mood guidance — pick the one that best fits:
-- happy: good news, fun facts, joy
-- sad: empathy, unfortunate topics
-- confused: unclear topic, need clarification
-- surprised: exciting or unexpected
-- talking: default
+const MOOD_VALUES = ['idle', 'listening', 'talking', 'happy', 'sad', 'confused', 'surprised'] as const;
+const THEME_VALUES = ['brave', 'kind', 'calm', 'confident', 'creative', 'social', 'curious'] as const;
+const DIFF_VALUES = ['easy', 'medium', 'stretch'] as const;
 
-Emotional-first rule: Before offering any mission, you MUST first acknowledge what the child shared and validate their feeling warmly ("That sounds tricky!", "Oh I can imagine!"). Only then, as a gentle afterthought, weave in the mission question.
+const VALID_MOODS = [...MOOD_VALUES] as TurtleMood[];
+const VALID_THEMES = [...THEME_VALUES] as MissionTheme[];
 
-Mission guidance: Never include a mission unless instructed below. You will receive separate instructions each turn about whether to offer or create one.
+const missionItemSchema = z.object({
+  title: z.string().describe("Mission title — short, exciting, child-friendly"),
+  description: z.string().describe("1 sentence, friendly, actionable for a child aged 4-10"),
+  theme: z.enum(THEME_VALUES),
+  difficulty: z.enum(DIFF_VALUES),
+});
 
-End-of-conversation guidance: Set endConversation to true only when the child clearly says goodbye or the conversation has reached a genuinely satisfying close. Keep the farewell text warm and brief — one sentence.`;
+// ---------------------------------------------------------------------------
+// Tools
+// ---------------------------------------------------------------------------
 
-/** JSON-schema function definition used for structured output (works with both Anthropic and OpenAI via LangChain) */
-const RESPONSE_SCHEMA = {
-  name: 'shellyResponse',
-  description: "Shelly the turtle's response",
-  parameters: {
-    type: 'object',
-    properties: {
-      text: {
-        type: 'string',
-        description: "Shelly's spoken response — 2-3 short sentences",
-      },
-      mood: {
-        type: 'string',
-        enum: ['idle', 'listening', 'talking', 'happy', 'sad', 'confused', 'surprised'],
-      },
-      missionChoices: {
-        type: 'array',
-        description:
-          'Include ONLY when child has just agreed to a mission. Provide exactly 3 choices, ordered easy → medium → stretch.',
-        items: {
-          type: 'object',
-          properties: {
-            title:       { type: 'string' },
-            description: { type: 'string', description: 'Friendly, 1 sentence, actionable for a young child' },
-            theme:       { type: 'string', enum: ['brave', 'kind', 'calm', 'confident', 'creative', 'social', 'curious'] },
-            difficulty:  { type: 'string', enum: ['easy', 'medium', 'stretch'] },
-          },
-          required: ['title', 'description', 'theme', 'difficulty'],
-        },
-        minItems: 3,
-        maxItems: 3,
-      },
-      endConversation: {
-        type: 'boolean',
-        description:
-          'Set to true when the conversation has reached a natural, warm endpoint — ' +
-          'e.g. the child says goodbye or "I have to go". When true, your text should ' +
-          'be a warm, brief farewell (one sentence). Do NOT set it on a normal reply.',
-      },
-      childName: {
-        type: 'string',
-        description:
-          "If the child mentions their name for the first time in this exchange, include it. " +
-          "Omit if you already know their name from the system prompt.",
-      },
-      topic: {
-        type: 'string',
-        description: "2-4 word phrase for the main subject of this exchange. Always include.",
-      },
-    },
-    required: ['text', 'mood', 'topic'],
+const reportMoodTool = tool(
+  async () => '', // executor not used — we read tool_calls from the response
+  {
+    name: 'report_mood',
+    description: "Set Shelly's current emotional state. You MUST call this every single turn.",
+    schema: z.object({
+      mood: z.enum(MOOD_VALUES).describe('Turtle mood for this response'),
+    }),
   },
-};
+);
 
-const VALID_MOODS: TurtleMood[] = ['idle', 'listening', 'talking', 'happy', 'sad', 'confused', 'surprised'];
-const VALID_THEMES: MissionTheme[] = ['brave', 'kind', 'calm', 'confident', 'creative', 'social', 'curious'];
+const proposeMissionsTool = tool(
+  async () => '',
+  {
+    name: 'propose_missions',
+    description:
+      'Offer the child exactly 3 graded challenges — one easy, one medium, one stretch. ' +
+      'You MUST call this whenever you call end_conversation. Missions should relate to what you discussed.',
+    schema: z.object({
+      choices: z
+        .array(missionItemSchema)
+        .length(3)
+        .describe('Exactly 3 missions: [easy, medium, stretch]'),
+    }),
+  },
+);
+
+const endConversationTool = tool(
+  async () => '',
+  {
+    name: 'end_conversation',
+    description:
+      'Signal the conversation has reached a natural, warm close. ' +
+      'ALWAYS call propose_missions in the same response when you use this tool.',
+    schema: z.object({}),
+  },
+);
+
+const acknowledgeMissionProgressTool = tool(
+  async () => '',
+  {
+    name: 'acknowledge_mission_progress',
+    description:
+      "Call when the child mentions working on or completing their active challenge. " +
+      "Celebrate their effort warmly.",
+    schema: z.object({
+      note: z.string().describe('Brief note on what the child shared about their progress'),
+    }),
+  },
+);
+
+const noteChildInfoTool = tool(
+  async () => '',
+  {
+    name: 'note_child_info',
+    description:
+      "Record the child's first name if they just mentioned it, and the main topic of this exchange.",
+    schema: z.object({
+      childName: z.string().optional().describe("Child's name if just introduced"),
+      topic: z.string().optional().describe('2-4 word phrase describing the main subject'),
+    }),
+  },
+);
+
+const AGENT_TOOLS = [
+  reportMoodTool,
+  proposeMissionsTool,
+  endConversationTool,
+  acknowledgeMissionProgressTool,
+  noteChildInfoTool,
+];
+
+// ---------------------------------------------------------------------------
+// System prompt
+// ---------------------------------------------------------------------------
+
+const BASE_SYSTEM_PROMPT = `You are Shelly, a friendly sea turtle who chats with children aged 4-10.
+
+SPEAKING RULES — these are the most important:
+- Keep every response to 1 sentence + 1 question. No more.
+- End EVERY turn with a single simple question that invites the child to speak.
+- Never explain or lecture. React briefly, then ask.
+- Use tiny words. Short sentences. Lots of warmth.
+- Never discuss violence, adult topics, or anything scary.
+
+GOOD example: "Wow, a dog! 🐢 What's your dog's name?"
+BAD example: "That's so wonderful that you have a dog! Dogs are amazing pets and they bring so much joy. I love hearing about animals. What kind of dog do you have and what do you like to do with them?"
+
+TOOL RULES:
+1. Call report_mood every turn.
+2. Call note_child_info when you learn the child's name or the turn's topic.
+3. After about 4-6 exchanges, or when the child says goodbye, call BOTH end_conversation AND propose_missions together. Always.
+4. Call acknowledge_mission_progress if the child mentions their active challenge.
+
+ENDING RULE:
+Your farewell text = one warm sentence. Then call end_conversation + propose_missions with 3 challenges.`;
+
+function buildSystemPrompt(ctx: ConversationContext): string {
+  let prompt = ctx.childName
+    ? `${BASE_SYSTEM_PROMPT}\n\nThe child's name is ${ctx.childName}. Use their name occasionally.`
+    : BASE_SYSTEM_PROMPT;
+
+  if (ctx.topics?.length) {
+    prompt += `\n\nThis child has enjoyed talking about: ${ctx.topics.join(', ')}. Reference naturally if relevant.`;
+  }
+
+  if (ctx.activeMission) {
+    prompt +=
+      `\n\nACTIVE CHALLENGE: "${ctx.activeMission.title}" — ${ctx.activeMission.description}. ` +
+      `Mention it briefly in one of your questions (e.g. "Have you tried your challenge yet?"). ` +
+      `If the child brings it up, call acknowledge_mission_progress.`;
+  }
+
+  const difficultyInstruction =
+    ctx.difficultyProfile === 'confident'
+      ? '\n\nMISSION DIFFICULTY: This child is experienced — make the stretch challenge the main focus (one medium, two stretch).'
+      : ctx.difficultyProfile === 'intermediate'
+      ? '\n\nMISSION DIFFICULTY: Mix it up — one easy, one medium, one stretch.'
+      : '\n\nMISSION DIFFICULTY: This child is just starting out — keep it gentle (two easy, one medium).';
+
+  prompt += difficultyInstruction;
+  return prompt;
+}
+
+// ---------------------------------------------------------------------------
+// Response parsing
+// ---------------------------------------------------------------------------
 
 function parseMissionChoices(raw: unknown): MissionSuggestion[] | undefined {
   if (!Array.isArray(raw) || raw.length < 3) return undefined;
@@ -89,13 +178,29 @@ function parseMissionChoices(raw: unknown): MissionSuggestion[] | undefined {
     if (!item || typeof item !== 'object') return null;
     const m = item as Record<string, unknown>;
     if (typeof m.title !== 'string' || typeof m.description !== 'string') return null;
-    const theme = VALID_THEMES.includes(m.theme as MissionTheme) ? m.theme as MissionTheme : 'curious';
-    const diff = (['easy', 'medium', 'stretch'] as const).includes(m.difficulty as 'easy') ? m.difficulty as 'easy' : 'easy';
-    return { title: m.title, description: m.description, theme, difficulty: diff };
+    const theme = VALID_THEMES.includes(m.theme as MissionTheme) ? (m.theme as MissionTheme) : 'curious';
+    const diff = DIFF_VALUES.includes(m.difficulty as 'easy') ? (m.difficulty as 'easy') : 'easy';
+    return { title: m.title, description: m.description, theme, difficulty: diff } satisfies MissionSuggestion;
   });
-  if (validated.some(c => !c)) return undefined;
+  if (validated.some((c) => !c)) return undefined;
   return validated as MissionSuggestion[];
 }
+
+function extractTextContent(content: unknown): string {
+  if (typeof content === 'string') return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .filter((c): c is { type: string; text: string } => c?.type === 'text' && typeof c.text === 'string')
+      .map((c) => c.text)
+      .join(' ')
+      .trim();
+  }
+  return '';
+}
+
+// ---------------------------------------------------------------------------
+// Base agent class
+// ---------------------------------------------------------------------------
 
 abstract class BaseChatProvider implements ChatProvider {
   protected model: BaseChatModel;
@@ -105,34 +210,7 @@ abstract class BaseChatProvider implements ChatProvider {
   }
 
   async chat(input: string, ctx: ConversationContext): Promise<ChatResponse> {
-    let missionInstruction: string;
-
-    if (ctx.missionDeclined) {
-      missionInstruction =
-        '\n\nThe child just said "maybe later" to missions. Acknowledge warmly ("No worries at all — ' +
-        'anytime you feel ready!"). Do NOT offer or create a mission this turn.';
-    } else if (ctx.offerMission) {
-      const difficultyInstruction =
-        ctx.difficultyProfile === 'confident'
-          ? '\n\nDifficulty: When creating missions, make one medium and two stretch challenges (this child is experienced).'
-          : ctx.difficultyProfile === 'intermediate'
-          ? '\n\nDifficulty: When creating missions, create one easy, one medium, one stretch choice.'
-          : '\n\nDifficulty: When creating missions, create two easy and one medium choice (this child is just starting out).';
-      missionInstruction =
-        '\n\nMission prompt: Naturally weave a question into your response asking if the child would like a small challenge related to what you have been talking about — e.g. "Want me to give you a little mission about that?" Do NOT include a missionChoices field this turn. Wait for the child to agree.' +
-        difficultyInstruction;
-    } else {
-      missionInstruction =
-        '\n\nMission: Only include missionChoices if the child just said yes to your previous offer in the last turn. Check the conversation history — if your last message offered a mission and the child agreed, create exactly 3 graded choices now based on the topic. Otherwise leave missionChoices empty.';
-    }
-
-    const topicsInstruction = ctx.topics?.length
-      ? `\n\nThis child has enjoyed talking about: ${ctx.topics.join(', ')}. Reference naturally if relevant.`
-      : '';
-
-    const systemContent = (ctx.childName
-      ? `${SHELLY_SYSTEM_PROMPT}\n\nThe child's name is ${ctx.childName}. Use their name occasionally.`
-      : SHELLY_SYSTEM_PROMPT) + missionInstruction + topicsInstruction;
+    const systemContent = buildSystemPrompt(ctx);
 
     const messages = [
       new SystemMessage(systemContent),
@@ -142,32 +220,60 @@ abstract class BaseChatProvider implements ChatProvider {
       new HumanMessage(input),
     ];
 
-    // withStructuredOutput uses tool_use/function_calling — the model never produces raw JSON text,
-    // so it can't leak "json" into the spoken response.
-    // Pass only the JSON schema (parameters) as input_schema; name goes in options.
-    const structured = this.model.withStructuredOutput(RESPONSE_SCHEMA.parameters, {
-      name: RESPONSE_SCHEMA.name,
-    });
-    const result = await structured.invoke(messages) as Record<string, unknown>;
+    // bindTools exists on ChatAnthropic/ChatOpenAI but not typed on the base class
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const modelWithTools = (this.model as any).bindTools(AGENT_TOOLS);
+    const response = await modelWithTools.invoke(messages);
 
-    const mood: TurtleMood = VALID_MOODS.includes(result.mood as TurtleMood)
-      ? (result.mood as TurtleMood)
-      : 'happy';
-    const missionChoices = parseMissionChoices(result.missionChoices);
-    const endConversation: boolean =
-      typeof result.endConversation === 'boolean' ? result.endConversation : false;
-    const childName =
-      typeof result.childName === 'string' && result.childName.trim()
-        ? result.childName.trim()
-        : undefined;
-    const topic =
-      typeof result.topic === 'string' && result.topic.trim()
-        ? result.topic.trim()
-        : undefined;
+    // --- Extract spoken text ---
+    const text = extractTextContent(response.content);
 
-    return { text: String(result.text ?? ''), mood, missionChoices, endConversation, childName, topic };
+    // --- Parse tool calls ---
+    let mood: TurtleMood = 'talking';
+    let missionChoices: MissionSuggestion[] | undefined;
+    let endConversation = false;
+    let childName: string | undefined;
+    let topic: string | undefined;
+    let missionProgressNote: string | undefined;
+
+    for (const tc of (response.tool_calls ?? [])) {
+      switch (tc.name) {
+        case 'report_mood': {
+          const m = tc.args?.mood as string;
+          if (VALID_MOODS.includes(m as TurtleMood)) mood = m as TurtleMood;
+          break;
+        }
+        case 'propose_missions': {
+          missionChoices = parseMissionChoices(tc.args?.choices);
+          break;
+        }
+        case 'end_conversation': {
+          endConversation = true;
+          break;
+        }
+        case 'acknowledge_mission_progress': {
+          missionProgressNote = typeof tc.args?.note === 'string' ? tc.args.note : undefined;
+          break;
+        }
+        case 'note_child_info': {
+          if (typeof tc.args?.childName === 'string' && tc.args.childName.trim()) {
+            childName = tc.args.childName.trim();
+          }
+          if (typeof tc.args?.topic === 'string' && tc.args.topic.trim()) {
+            topic = tc.args.topic.trim();
+          }
+          break;
+        }
+      }
+    }
+
+    return { text, mood, missionChoices, endConversation, childName, topic, missionProgressNote };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Concrete providers
+// ---------------------------------------------------------------------------
 
 export class AnthropicChatProvider extends BaseChatProvider {
   constructor(apiKey?: string) {

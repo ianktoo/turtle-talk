@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
   const meta = body.metadata ?? {};
 
   // Extract context from Vapi metadata (passed via model.metadata in VapiVoiceProvider)
-  const childName = typeof meta.childName === 'string' ? meta.childName : undefined;
-  const topics    = Array.isArray(meta.topics) ? (meta.topics as string[]) : [];
-  const missionDeclined = meta.missionDeclined === true;
+  const childName     = typeof meta.childName === 'string' ? meta.childName : undefined;
+  const topics        = Array.isArray(meta.topics) ? (meta.topics as string[]) : [];
+  const activeMission = meta.activeMission ?? null;
 
   // Last user message is the one we respond to
   const lastUser = [...rawMessages].reverse().find((m) => m.role === 'user');
@@ -53,13 +53,10 @@ export async function POST(req: NextRequest) {
     .filter((m) => m.role === 'user' || m.role === 'assistant')
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-  const completedExchanges = Math.floor(history.length / 2);
   const context: ConversationContext = {
     messages: history,
     childName,
     topics,
-    offerMission: !missionDeclined && completedExchanges >= 2 && Math.random() < 0.3,
-    missionDeclined,
   };
 
   // --- Guardrail + LLM ---

@@ -44,19 +44,19 @@ export async function POST(req: NextRequest) {
   }
 
   const difficultyProfileRaw = formData.get('difficultyProfile');
-  const missionDeclinedRaw   = formData.get('missionDeclined');
   const difficultyProfile = (['beginner', 'intermediate', 'confident'] as const)
     .includes(difficultyProfileRaw as 'beginner')
       ? difficultyProfileRaw as ConversationContext['difficultyProfile']
       : 'beginner';
-  const missionDeclined = missionDeclinedRaw === 'true';
 
-  // Randomly offer a mission after at least 2 full exchanges (~30% chance per eligible turn).
-  // messages holds completed turns: 2 messages = 1 exchange (user + assistant).
-  const completedExchanges = Math.floor(messages.length / 2);
-  const offerMission = !missionDeclined && completedExchanges >= 2 && Math.random() < 0.3;
+  // Active mission — the child's currently selected challenge, sent by the client.
+  let activeMission: ConversationContext['activeMission'] = null;
+  const activeMissionRaw = formData.get('activeMission');
+  if (activeMissionRaw && typeof activeMissionRaw === 'string') {
+    try { activeMission = JSON.parse(activeMissionRaw); } catch { /* ignore malformed */ }
+  }
 
-  const context: ConversationContext = { messages, offerMission, childName, topics, difficultyProfile, missionDeclined };
+  const context: ConversationContext = { messages, childName, topics, difficultyProfile, activeMission };
 
   const stt = speechConfig.stt.provider === 'gemini' ? new GeminiSTTProvider() : new OpenAISTTProvider();
   const tts = speechConfig.tts.provider === 'gemini' ? new GeminiTTSProvider() : new ElevenLabsTTSProvider();
@@ -83,7 +83,11 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        send({ type: 'meta', ...textResult });
+        // Only include missionProgressNote in meta if it was set
+        const metaPayload = textResult.missionProgressNote
+          ? textResult
+          : { ...textResult, missionProgressNote: undefined };
+        send({ type: 'meta', ...metaPayload });
 
         // Phase 2: TTS — only synthesize when there is actual response text
         if (textResult.responseText.trim()) {

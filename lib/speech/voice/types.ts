@@ -1,4 +1,4 @@
-import type { TurtleMood, Message, MissionSuggestion } from '../types';
+import type { TurtleMood, Message, MissionSuggestion, Mission } from '../types';
 
 export type VoiceSessionState =
   | 'idle'
@@ -15,7 +15,8 @@ export interface VoiceSessionOptions {
   topics?: string[];
   initialMessages?: Message[];
   difficultyProfile?: 'beginner' | 'intermediate' | 'confident';
-  missionDeclined?: boolean;
+  /** The child's currently active challenge — shown to the agent each turn for coaching */
+  activeMission?: Mission | null;
 }
 
 /** Typed event payloads — one value per event name */
