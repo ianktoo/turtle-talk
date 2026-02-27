@@ -4,16 +4,14 @@ import userEvent from '@testing-library/user-event';
 import MuteButton from '@/app/components/talk/MuteButton';
 
 describe('MuteButton', () => {
-  it('renders the microphone emoji when not muted', () => {
+  it('renders with correct aria-label when not muted', () => {
     render(<MuteButton isMuted={false} onToggle={() => {}} />);
     expect(screen.getByLabelText('Mute microphone')).toBeTruthy();
-    expect(screen.getByText('🎤')).toBeTruthy();
   });
 
-  it('renders the muted emoji when muted', () => {
+  it('renders with correct aria-label when muted', () => {
     render(<MuteButton isMuted={true} onToggle={() => {}} />);
     expect(screen.getByLabelText('Unmute microphone')).toBeTruthy();
-    expect(screen.getByText('🔇')).toBeTruthy();
   });
 
   it('calls onToggle when clicked', async () => {
@@ -25,19 +23,21 @@ describe('MuteButton', () => {
 
   it('sets aria-pressed correctly when not muted', () => {
     render(<MuteButton isMuted={false} onToggle={() => {}} />);
-    const btn = screen.getByRole('button');
-    expect(btn).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('sets aria-pressed correctly when muted', () => {
     render(<MuteButton isMuted={true} onToggle={() => {}} />);
-    const btn = screen.getByRole('button');
-    expect(btn).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('has minimum touch target size of 56px', () => {
+  it('has touch target size of 64px', () => {
     render(<MuteButton isMuted={false} onToggle={() => {}} />);
-    const btn = screen.getByRole('button');
-    expect(btn).toHaveStyle({ width: '56px', height: '56px' });
+    expect(screen.getByRole('button')).toHaveStyle({ width: '64px', height: '64px' });
+  });
+
+  it('renders an SVG icon', () => {
+    const { container } = render(<MuteButton isMuted={false} onToggle={() => {}} />);
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 });

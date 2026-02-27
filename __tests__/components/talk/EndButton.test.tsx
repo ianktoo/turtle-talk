@@ -21,14 +21,13 @@ describe('EndButton', () => {
     expect(onEnd).toHaveBeenCalledTimes(1);
   });
 
-  it('has minimum touch target size of 56px', () => {
+  it('has primary touch target size of 80px', () => {
     render(<EndButton onEnd={() => {}} />);
-    const btn = screen.getByRole('button');
-    expect(btn).toHaveStyle({ width: '56px', height: '56px' });
+    expect(screen.getByRole('button')).toHaveStyle({ width: '80px', height: '80px' });
   });
 
-  it('displays ✕ symbol', () => {
-    render(<EndButton onEnd={() => {}} />);
-    expect(screen.getByText('✕')).toBeTruthy();
+  it('renders an SVG icon', () => {
+    const { container } = render(<EndButton onEnd={() => {}} />);
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 });
