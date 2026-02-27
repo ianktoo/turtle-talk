@@ -49,6 +49,7 @@ export interface ChatResponse {
   text: string;
   mood: TurtleMood;
   mission?: MissionSuggestion;
+  endConversation?: boolean;
 }
 
 export interface ChatProvider {
@@ -68,6 +69,7 @@ export interface TextProcessResult {
   responseText: string;
   mood: TurtleMood;
   mission?: MissionSuggestion;
+  endConversation?: boolean;
 }
 
 export interface ProcessResult extends TextProcessResult {

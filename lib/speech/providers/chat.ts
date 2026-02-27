@@ -20,7 +20,9 @@ Mood guidance — pick the one that best fits:
 - surprised: exciting or unexpected
 - talking: default
 
-Mission guidance: Only suggest a mission when you clearly identify a personal challenge the child could grow from (shyness, fear, social difficulty, emotional regulation). Not every turn needs a mission.`;
+Mission guidance: Only suggest a mission when you clearly identify a personal challenge the child could grow from (shyness, fear, social difficulty, emotional regulation). Not every turn needs a mission.
+
+End-of-conversation guidance: Set endConversation to true only when the child clearly says goodbye or the conversation has reached a genuinely satisfying close. Keep the farewell text warm and brief — one sentence.`;
 
 /** JSON-schema function definition used for structured output (works with both Anthropic and OpenAI via LangChain) */
 const RESPONSE_SCHEMA = {
@@ -49,6 +51,13 @@ const RESPONSE_SCHEMA = {
           },
         },
         required: ['title', 'description', 'theme'],
+      },
+      endConversation: {
+        type: 'boolean',
+        description:
+          'Set to true when the conversation has reached a natural, warm endpoint — ' +
+          'e.g. the child says goodbye or "I have to go". When true, your text should ' +
+          'be a warm, brief farewell (one sentence). Do NOT set it on a normal reply.',
       },
     },
     required: ['text', 'mood'],
@@ -97,8 +106,10 @@ abstract class BaseChatProvider implements ChatProvider {
       ? (result.mood as TurtleMood)
       : 'happy';
     const mission = parseMission(result.mission);
+    const endConversation: boolean =
+      typeof result.endConversation === 'boolean' ? result.endConversation : false;
 
-    return { text: String(result.text ?? ''), mood, mission };
+    return { text: String(result.text ?? ''), mood, mission, endConversation };
   }
 }
 

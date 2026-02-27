@@ -111,6 +111,7 @@ export class SpeechService {
       responseText: safeResponseText,
       mood: chatResponse.mood,
       mission: chatResponse.mission,
+      endConversation: chatResponse.endConversation,
     };
   }
 
@@ -164,6 +165,7 @@ export class SpeechService {
       responseAudio,
       mood: chatResponse.mood,
       mission: chatResponse.mission,
+      endConversation: chatResponse.endConversation,
     };
   }
 

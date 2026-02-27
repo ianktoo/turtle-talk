@@ -54,6 +54,8 @@ export function useSpeechConversation(
   const vadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messagesRef = useRef<Message[]>([]);
+  const pendingEndRef = useRef(false);
+  const endConversationRef = useRef<() => void>(() => {});
 
   // Keep refs in sync
   useEffect(() => {
@@ -96,6 +98,11 @@ export function useSpeechConversation(
       source.start();
       source.onended = () => {
         playCtx.close();
+        if (pendingEndRef.current) {
+          pendingEndRef.current = false;
+          endConversationRef.current();
+          return;
+        }
         if (stateRef.current !== 'ended' && stateRef.current !== 'muted') {
           setStateSync('listening');
           setMood('listening');
@@ -142,11 +149,12 @@ export function useSpeechConversation(
             const event = JSON.parse(line) as Record<string, unknown>;
 
             if (event.type === 'meta') {
-              const { userText, responseText, mood: responseMood, mission } = event as {
-                userText: string; responseText: string; mood: TurtleMood; mission?: unknown;
+              const { userText, responseText, mood: responseMood, mission, endConversation: shouldEnd } = event as {
+                userText: string; responseText: string; mood: TurtleMood; mission?: unknown; endConversation?: boolean;
               };
 
               if (mission) onMission?.(mission as Parameters<typeof onMission>[0]);
+              if (shouldEnd) pendingEndRef.current = true;
 
               setMessages([
                 ...messagesRef.current,
@@ -284,6 +292,10 @@ export function useSpeechConversation(
     setMood('idle');
     onEnd?.();
   }, [cleanup, setStateSync, onEnd]);
+
+  useEffect(() => {
+    endConversationRef.current = endConversation;
+  }, [endConversation]);
 
   // Cleanup on unmount
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { SpeechService } from '@/lib/speech/SpeechService';
 import { SpeechServiceError, GuardrailBlockedError } from '@/lib/speech/errors';
-import type { STTProvider, TTSProvider, ChatProvider, ConversationContext } from '@/lib/speech/types';
+import type { STTProvider, TTSProvider, ChatProvider, ConversationContext, MissionSuggestion } from '@/lib/speech/types';
 import type { GuardrailAgent, GuardrailResult } from '@/lib/speech/guardrails/types';
 
 function makeSTT(text = 'Hello Shelly'): jest.Mocked<STTProvider> {
@@ -11,8 +11,13 @@ function makeTTS(): jest.Mocked<TTSProvider> {
   return { synthesize: jest.fn().mockResolvedValue(new ArrayBuffer(8)) };
 }
 
-function makeChat(text = 'Hi there!', mood = 'happy'): jest.Mocked<ChatProvider> {
-  return { chat: jest.fn().mockResolvedValue({ text, mood }) };
+function makeChat(
+  text = 'Hi there!',
+  mood = 'happy',
+  mission?: MissionSuggestion,
+  endConversation?: boolean,
+): jest.Mocked<ChatProvider> {
+  return { chat: jest.fn().mockResolvedValue({ text, mood, mission, endConversation }) };
 }
 
 function makeGuardrail(safe = true, name = 'TestGuardrail'): jest.Mocked<GuardrailAgent> {
@@ -158,5 +163,64 @@ describe('SpeechService', () => {
 
     expect(tts.synthesize).toHaveBeenCalledWith('Short.');
     expect(result.responseText).toBe('Short.');
+  });
+
+  describe('endConversation flag', () => {
+    it('processToText passes endConversation: true through to the result', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('Bye bye!', 'happy', undefined, true);
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.endConversation).toBe(true);
+    });
+
+    it('processToText result is falsy when chat does not set endConversation', async () => {
+      const stt = makeSTT();
+      const chat = makeChat();
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.endConversation).toBeFalsy();
+    });
+
+    it('process passes endConversation: true through to the result', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('See you later!', 'happy', undefined, true);
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.process(new Blob(['audio']), ctx);
+
+      expect(result.endConversation).toBe(true);
+    });
+
+    it('process result is falsy when chat does not set endConversation', async () => {
+      const stt = makeSTT();
+      const chat = makeChat();
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.process(new Blob(['audio']), ctx);
+
+      expect(result.endConversation).toBeFalsy();
+    });
+
+    it('does not set endConversation when input guardrail blocks', async () => {
+      const stt = makeSTT('kill everyone');
+      const chat = makeChat('Bye!', 'happy', undefined, true);
+      const tts = makeTTS();
+      const guardrail = makeGuardrail(false);
+      const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.endConversation).toBeFalsy();
+      expect(chat.chat).not.toHaveBeenCalled();
+    });
   });
 });

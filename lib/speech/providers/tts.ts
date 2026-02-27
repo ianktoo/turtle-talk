@@ -16,6 +16,8 @@ export class ElevenLabsTTSProvider implements TTSProvider {
       text,
       modelId: speechConfig.tts.model,
       outputFormat: speechConfig.tts.outputFormat,
+      languageCode: speechConfig.tts.languageCode,
+      voiceSettings: speechConfig.tts.voiceSettings,
     });
 
     const reader = stream.getReader();

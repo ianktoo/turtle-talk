@@ -7,9 +7,16 @@ export const speechConfig = {
     model: process.env.SPEECH_STT_MODEL ?? 'gpt-4o-mini-transcribe',
   },
   tts: {
-    voiceId: process.env.ELEVENLABS_VOICE_ID ?? '9BWtsMINqrJLrRacOk9x', // Aria
+    voiceId: process.env.ELEVENLABS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL', // Sarah — warm storyteller
     model: process.env.ELEVENLABS_MODEL ?? 'eleven_turbo_v2_5',
     outputFormat: 'mp3_44100_128' as const,
+    languageCode: 'en',
+    voiceSettings: {
+      stability: 0.75,       // high = consistent, predictable voice across turns
+      similarityBoost: 0.75, // adhere closely to Sarah's reference voice
+      style: 0,              // no style exaggeration — keeps tone steady
+      speed: 0.9,            // slightly slower for kids aged 4-10
+    },
   },
   chat: {
     provider: (process.env.SPEECH_CHAT_PROVIDER ?? 'anthropic') as 'anthropic' | 'openai',
