@@ -99,7 +99,10 @@ abstract class BaseChatProvider implements ChatProvider {
 
     // withStructuredOutput uses tool_use/function_calling — the model never produces raw JSON text,
     // so it can't leak "json" into the spoken response.
-    const structured = this.model.withStructuredOutput(RESPONSE_SCHEMA);
+    // Pass only the JSON schema (parameters) as input_schema; name goes in options.
+    const structured = this.model.withStructuredOutput(RESPONSE_SCHEMA.parameters, {
+      name: RESPONSE_SCHEMA.name,
+    });
     const result = await structured.invoke(messages) as Record<string, unknown>;
 
     const mood: TurtleMood = VALID_MOODS.includes(result.mood as TurtleMood)
