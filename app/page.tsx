@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Phone, Star, Leaf } from "lucide-react";
 
 export default function Home() {
   return (
@@ -41,92 +42,96 @@ export default function Home() {
           fontWeight: 600,
         }}
       >
-        What do you want to do?
+        Chat with Shelly!
       </p>
 
-      {/* Buttons */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%", maxWidth: 360 }}>
-
-        <Link href="/talk" style={{ width: "100%", textDecoration: "none" }}>
+      {/* Primary call button */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        <Link href="/talk">
           <button
             style={{
-              width: "100%",
-              padding: "18px 24px",
-              borderRadius: 24,
-              border: "none",
+              width: 180,
+              height: 180,
+              borderRadius: "50%",
               background: "linear-gradient(135deg, #16a34a, #22c55e)",
-              color: "white",
-              fontSize: "1.35rem",
-              fontWeight: 800,
+              boxShadow: "0 8px 32px rgba(22,163,74,0.55)",
+              animation: "btnPulse 3s ease-in-out infinite",
+              border: "none",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 14,
-              boxShadow: "0 6px 24px rgba(22,163,74,0.45)",
-              animation: "btnPulse 3s ease-in-out infinite",
+              justifyContent: "center",
             }}
           >
-            <span style={{ fontSize: "1.8rem" }}>🗣️</span>
-            <span style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.2 }}>
-              <span>Turtle Talk</span>
-              <span style={{ fontSize: "0.85rem", fontWeight: 500, opacity: 0.85 }}>Chat with Shelly!</span>
-            </span>
+            <Phone size={52} color="white" strokeWidth={2} />
           </button>
         </Link>
+        <p
+          style={{
+            fontSize: "1.1rem",
+            fontWeight: 700,
+            color: "white",
+            textShadow: "0 2px 6px rgba(0,0,0,0.4)",
+            margin: "12px 0 0",
+            textAlign: "center",
+          }}
+        >
+          Talk to Shelly!
+        </p>
+      </div>
 
-        <Link href="/missions" style={{ width: "100%", textDecoration: "none" }}>
+      {/* Secondary nav row */}
+      <div style={{ display: "flex", gap: 12, width: "100%", maxWidth: 360, marginTop: 24 }}>
+
+        <Link href="/missions" style={{ flex: 1, textDecoration: "none" }}>
           <button
             style={{
               width: "100%",
-              padding: "18px 24px",
-              borderRadius: 24,
+              padding: "14px 16px",
+              borderRadius: 20,
               border: "none",
               background: "linear-gradient(135deg, #ea580c, #f97316)",
-              color: "white",
-              fontSize: "1.35rem",
-              fontWeight: 800,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              boxShadow: "0 6px 24px rgba(234,88,12,0.45)",
+              boxShadow: "0 4px 16px rgba(234,88,12,0.45)",
               animation: "btnPulse 3s ease-in-out infinite",
               animationDelay: "1.5s",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "1rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
-            <span style={{ fontSize: "1.8rem" }}>🥗</span>
-            <span style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.2 }}>
-              <span>Feed Turtle</span>
-              <span style={{ fontSize: "0.85rem", fontWeight: 500, opacity: 0.85 }}>Complete missions!</span>
-            </span>
+            <Star size={20} color="white" strokeWidth={2} />
+            My Missions
           </button>
         </Link>
 
-        <Link href="/world" style={{ width: "100%", textDecoration: "none" }}>
+        <Link href="/world" style={{ flex: 1, textDecoration: "none" }}>
           <button
             style={{
               width: "100%",
-              padding: "18px 24px",
-              borderRadius: 24,
+              padding: "14px 16px",
+              borderRadius: 20,
               border: "none",
               background: "linear-gradient(135deg, #0e7490, #06b6d4)",
-              color: "white",
-              fontSize: "1.35rem",
-              fontWeight: 800,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              boxShadow: "0 6px 24px rgba(6,182,212,0.45)",
+              boxShadow: "0 4px 16px rgba(6,182,212,0.45)",
               animation: "btnPulse 3s ease-in-out infinite",
               animationDelay: "3s",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "1rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
-            <span style={{ fontSize: "1.8rem" }}>🌿</span>
-            <span style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.2 }}>
-              <span>My Garden</span>
-              <span style={{ fontSize: "0.85rem", fontWeight: 500, opacity: 0.85 }}>See your brave acts!</span>
-            </span>
+            <Leaf size={20} color="white" strokeWidth={2} />
+            My Garden
           </button>
         </Link>
 
