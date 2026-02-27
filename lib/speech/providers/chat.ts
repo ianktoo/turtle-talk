@@ -20,7 +20,7 @@ Mood guidance — pick the one that best fits:
 - surprised: exciting or unexpected
 - talking: default
 
-Mission guidance: Only suggest a mission when you clearly identify a personal challenge the child could grow from (shyness, fear, social difficulty, emotional regulation). Not every turn needs a mission.
+Mission guidance: Never include a mission unless instructed below. You will receive separate instructions each turn about whether to offer or create one.
 
 End-of-conversation guidance: Set endConversation to true only when the child clearly says goodbye or the conversation has reached a genuinely satisfying close. Keep the farewell text warm and brief — one sentence.`;
 
@@ -41,7 +41,7 @@ const RESPONSE_SCHEMA = {
       },
       mission: {
         type: 'object',
-        description: 'Optional mission — include only when a meaningful personal challenge is identified',
+        description: 'Include only when the child has just agreed to a mission after Shelly asked them',
         properties: {
           title: { type: 'string' },
           description: { type: 'string', description: 'Friendly, actionable for a young child' },
@@ -85,9 +85,13 @@ abstract class BaseChatProvider implements ChatProvider {
   }
 
   async chat(input: string, ctx: ConversationContext): Promise<ChatResponse> {
-    const systemContent = ctx.childName
+    const missionInstruction = ctx.offerMission
+      ? '\n\nMission prompt: Naturally weave a question into your response asking if the child would like a small challenge related to what you have been talking about — e.g. "Want me to give you a little mission about that?" Do NOT include a mission field this turn. Wait for the child to agree.'
+      : '\n\nMission: Only include a mission if the child just said yes to your previous offer in the last turn. Check the conversation history — if your last message offered a mission and the child agreed, create one now based on the topic. Otherwise leave mission empty.';
+
+    const systemContent = (ctx.childName
       ? `${SHELLY_SYSTEM_PROMPT}\n\nThe child's name is ${ctx.childName}. Use their name occasionally.`
-      : SHELLY_SYSTEM_PROMPT;
+      : SHELLY_SYSTEM_PROMPT) + missionInstruction;
 
     const messages = [
       new SystemMessage(systemContent),

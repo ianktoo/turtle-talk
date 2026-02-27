@@ -29,6 +29,7 @@ export interface Message {
 export interface ConversationContext {
   messages: Message[];
   childName?: string;
+  offerMission?: boolean;
 }
 
 export interface STTProvider {

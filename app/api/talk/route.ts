@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const context: ConversationContext = { messages };
+  // Randomly offer a mission after at least 2 full exchanges (~30% chance per eligible turn).
+  // messages holds completed turns: 2 messages = 1 exchange (user + assistant).
+  const completedExchanges = Math.floor(messages.length / 2);
+  const offerMission = completedExchanges >= 2 && Math.random() < 0.3;
+
+  const context: ConversationContext = { messages, offerMission };
 
   const stt = new OpenAISTTProvider();
   const tts = new ElevenLabsTTSProvider();
