@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+
+export const maxDuration = 60; // seconds — STT + LLM + TTS can exceed Vercel's 10s default
 import { SpeechService } from '@/lib/speech/SpeechService';
 import { OpenAISTTProvider } from '@/lib/speech/providers/stt';
 import { ElevenLabsTTSProvider } from '@/lib/speech/providers/tts';
