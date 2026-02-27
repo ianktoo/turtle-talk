@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Zap, CheckCircle2, Check, MessageCircle } from 'lucide-react';
 import { useMissions } from '@/app/hooks/useMissions';
 import type { Mission, MissionTheme } from '@/lib/speech/types';
 
@@ -92,9 +93,12 @@ function MissionCard({
               fontWeight: 700,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
-            ✓ Done!
+            <Check size={14} strokeWidth={2.5} /> Done!
           </button>
         )}
         {!isActive && onDelete && (
@@ -200,9 +204,12 @@ export default function MissionsPage() {
             fontWeight: 600,
             cursor: 'pointer',
             backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
           }}
         >
-          ← Home
+          <ArrowLeft size={16} strokeWidth={2.5} style={{ flexShrink: 0 }} /> Home
         </button>
         <h1
           style={{
@@ -253,7 +260,7 @@ export default function MissionsPage() {
                 gap: 8,
               }}
             >
-              {t === 'active' ? '⚡ Active' : '✅ Completed'}
+              {t === 'active' ? <><Zap size={14} strokeWidth={2.5} /> Active</> : <><CheckCircle2 size={14} strokeWidth={2.5} /> Completed</>}
               {count > 0 && (
                 <span
                   style={{
@@ -312,9 +319,13 @@ export default function MissionsPage() {
           cursor: 'pointer',
           textShadow: '0 1px 4px rgba(0,0,0,0.3)',
           backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
         }}
       >
-        🐢 Talk to Shelly
+        <MessageCircle size={18} strokeWidth={2} /> Talk to Shelly
       </button>
     </main>
   );
