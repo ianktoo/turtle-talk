@@ -36,7 +36,7 @@ export class OpenAISTTProvider implements STTProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini STT  (gemini-2.0-flash with inline audio input)
+// Gemini STT  (gemini-2.0-flash-lite with inline audio input)
 // ---------------------------------------------------------------------------
 
 export class GeminiSTTProvider implements STTProvider {
@@ -51,7 +51,7 @@ export class GeminiSTTProvider implements STTProvider {
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = (audio.type || 'audio/webm') as string;
 
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
     const result = await model.generateContent([
       {

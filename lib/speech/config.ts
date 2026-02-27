@@ -8,7 +8,7 @@
  *
  * STT provider:
  *   SPEECH_STT_PROVIDER=openai   (default) — OpenAI Whisper / gpt-4o-mini-transcribe
- *   SPEECH_STT_PROVIDER=gemini   — Gemini 2.0 Flash audio input
+ *   SPEECH_STT_PROVIDER=gemini   — Gemini 2.0 Flash Lite audio input
  *
  * TTS provider:
  *   SPEECH_TTS_PROVIDER=elevenlabs  (default) — ElevenLabs Sarah voice
