@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 
 export const maxDuration = 60; // seconds — STT + LLM + TTS can exceed Vercel's 10s default
 import { SpeechService } from '@/lib/speech/SpeechService';
-import { OpenAISTTProvider } from '@/lib/speech/providers/stt';
-import { ElevenLabsTTSProvider } from '@/lib/speech/providers/tts';
+import { OpenAISTTProvider, GeminiSTTProvider } from '@/lib/speech/providers/stt';
+import { ElevenLabsTTSProvider, GeminiTTSProvider } from '@/lib/speech/providers/tts';
 import { createChatProvider } from '@/lib/speech/providers/chat';
 import { ChildSafeGuardrail } from '@/lib/speech/guardrails/ChildSafeGuardrail';
 import type { ConversationContext, Message } from '@/lib/speech/types';
@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
 
   const context: ConversationContext = { messages, offerMission, childName, topics, difficultyProfile, missionDeclined };
 
-  const stt = new OpenAISTTProvider();
-  const tts = new ElevenLabsTTSProvider();
+  const stt = speechConfig.stt.provider === 'gemini' ? new GeminiSTTProvider() : new OpenAISTTProvider();
+  const tts = speechConfig.tts.provider === 'gemini' ? new GeminiTTSProvider() : new ElevenLabsTTSProvider();
   const chat = createChatProvider(speechConfig.chat.provider);
   const guardrail = new ChildSafeGuardrail();
   const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });
