@@ -44,9 +44,6 @@ export class ElevenLabsTTSProvider implements TTSProvider {
 // AudioContext.decodeAudioData() can play it without extra dependencies.
 // ---------------------------------------------------------------------------
 
-const GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
-// Aoede: bright, clear, friendly — well-suited for a children's character.
-const GEMINI_TTS_VOICE = 'Aoede';
 const GEMINI_TTS_SAMPLE_RATE = 24000;
 
 function pcmToWav(pcm: Buffer, sampleRate = GEMINI_TTS_SAMPLE_RATE, channels = 1, bitDepth = 16): Buffer {
@@ -78,7 +75,7 @@ export class GeminiTTSProvider implements TTSProvider {
   }
 
   async synthesize(text: string): Promise<ArrayBuffer> {
-    const model = this.genAI.getGenerativeModel({ model: GEMINI_TTS_MODEL });
+    const model = this.genAI.getGenerativeModel({ model: speechConfig.tts.geminiModel });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (model as any).generateContent({
@@ -87,7 +84,7 @@ export class GeminiTTSProvider implements TTSProvider {
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: GEMINI_TTS_VOICE },
+            prebuiltVoiceConfig: { voiceName: speechConfig.tts.geminiVoice },
           },
         },
       },

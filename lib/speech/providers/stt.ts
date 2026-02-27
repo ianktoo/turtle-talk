@@ -51,7 +51,7 @@ export class GeminiSTTProvider implements STTProvider {
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = (audio.type || 'audio/webm') as string;
 
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+    const model = this.genAI.getGenerativeModel({ model: speechConfig.stt.geminiModel });
 
     const result = await model.generateContent([
       {
