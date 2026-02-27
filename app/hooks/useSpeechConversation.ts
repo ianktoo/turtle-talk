@@ -14,7 +14,15 @@ export type ConversationState =
 
 interface UseSpeechConversationOptions {
   onEnd?: () => void;
-  onMission?: (mission: MissionSuggestion) => void;
+  onMissionChoices?: (choices: MissionSuggestion[]) => void;
+  initialMessages?: Message[];
+  childName?: string | null;
+  topics?: string[];
+  onChildName?: (name: string) => void;
+  onTopic?: (topic: string) => void;
+  onMessagesChange?: (msgs: Message[]) => void;
+  difficultyProfile?: 'beginner' | 'intermediate' | 'confident';
+  missionDeclined?: boolean;
 }
 
 interface UseSpeechConversationResult {
@@ -28,15 +36,16 @@ interface UseSpeechConversationResult {
   startListening: () => Promise<void>;
 }
 
-const VAD_THRESHOLD = 15;
+const VAD_THRESHOLD = 35;    // raised from 15 — ambient noise sits at 8-20, real speech at 40+
 const VAD_START_MS = 150;
 const VAD_STOP_MS = 600;
 const POLL_INTERVAL_MS = 100;
+const MIN_AUDIO_BYTES = 6000; // ~400ms of real speech; smaller blobs are likely noise
 
 export function useSpeechConversation(
   options: UseSpeechConversationOptions = {},
 ): UseSpeechConversationResult {
-  const { onEnd, onMission } = options;
+  const { onEnd } = options;
 
   const [state, setState] = useState<ConversationState>('idle');
   const [mood, setMood] = useState<TurtleMood>('idle');
@@ -56,15 +65,36 @@ export function useSpeechConversation(
   const messagesRef = useRef<Message[]>([]);
   const pendingEndRef = useRef(false);
   const endConversationRef = useRef<() => void>(() => {});
+  const onChildNameRef = useRef(options.onChildName);
+  const onTopicRef = useRef(options.onTopic);
+  const onMessagesChangeRef = useRef(options.onMessagesChange);
+  const childNameRef = useRef(options.childName);
+  const topicsRef = useRef(options.topics);
+  const onMissionChoicesRef = useRef(options.onMissionChoices);
+  const difficultyProfileRef = useRef(options.difficultyProfile);
+  const missionDeclinedRef = useRef(options.missionDeclined);
+  const initializedRef = useRef(false);
 
   // Keep refs in sync
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { onChildNameRef.current = options.onChildName; });
+  useEffect(() => { onTopicRef.current = options.onTopic; });
+  useEffect(() => { onMessagesChangeRef.current = options.onMessagesChange; });
+  useEffect(() => { childNameRef.current = options.childName; });
+  useEffect(() => { topicsRef.current = options.topics; });
+  useEffect(() => { onMissionChoicesRef.current = options.onMissionChoices; });
+  useEffect(() => { difficultyProfileRef.current = options.difficultyProfile; });
+  useEffect(() => { missionDeclinedRef.current = options.missionDeclined; });
 
+  // One-shot sync of persisted messages from localStorage (arrives after async useEffect in caller)
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+    if (!initializedRef.current && options.initialMessages?.length) {
+      initializedRef.current = true;
+      setMessages(options.initialMessages);
+      messagesRef.current = options.initialMessages;
+    }
+  }, [options.initialMessages]);
 
   const setStateSync = useCallback((s: ConversationState) => {
     stateRef.current = s;
@@ -114,12 +144,23 @@ export function useSpeechConversation(
 
   const sendAudio = useCallback(
     async (blob: Blob) => {
+      // Discard noise-only clips — too small to contain real speech
+      if (blob.size < MIN_AUDIO_BYTES) {
+        setStateSync('listening');
+        setMood('listening');
+        return;
+      }
+
       setStateSync('processing');
       setMood('confused'); // thinking face while processing
 
       const formData = new FormData();
       formData.append('audio', blob, 'audio.webm');
       formData.append('messages', JSON.stringify(messagesRef.current));
+      if (childNameRef.current) formData.append('childName', childNameRef.current);
+      if (topicsRef.current?.length) formData.append('topics', JSON.stringify(topicsRef.current));
+      if (difficultyProfileRef.current) formData.append('difficultyProfile', difficultyProfileRef.current);
+      if (missionDeclinedRef.current) formData.append('missionDeclined', 'true');
 
       try {
         const res = await fetch('/api/talk', { method: 'POST', body: formData });
@@ -130,11 +171,12 @@ export function useSpeechConversation(
         if (!res.body) throw new Error('No response body');
 
         // Stream NDJSON — two events:
-        //   {type:'meta', userText, responseText, mood, mission?}  ← arrives after LLM
-        //   {type:'audio', base64}                                  ← arrives after TTS
+        //   {type:'meta', userText, responseText, mood, missionChoices?}  ← arrives after LLM
+        //   {type:'audio', base64}                                         ← arrives after TTS
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let receivedMeta = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -149,18 +191,23 @@ export function useSpeechConversation(
             const event = JSON.parse(line) as Record<string, unknown>;
 
             if (event.type === 'meta') {
-              const { userText, responseText, mood: responseMood, mission, endConversation: shouldEnd } = event as {
-                userText: string; responseText: string; mood: TurtleMood; mission?: unknown; endConversation?: boolean;
+              receivedMeta = true;
+              const { userText, responseText, mood: responseMood, missionChoices, endConversation: shouldEnd, childName: detectedName, topic } = event as {
+                userText: string; responseText: string; mood: TurtleMood; missionChoices?: unknown; endConversation?: boolean; childName?: string; topic?: string;
               };
 
-              if (mission) onMission?.(mission as Parameters<typeof onMission>[0]);
+              if (missionChoices) onMissionChoicesRef.current?.(missionChoices as MissionSuggestion[]);
               if (shouldEnd) pendingEndRef.current = true;
+              if (detectedName) onChildNameRef.current?.(detectedName);
+              if (topic) onTopicRef.current?.(topic);
 
-              setMessages([
+              const updatedMessages: Message[] = [
                 ...messagesRef.current,
                 { role: 'user', content: userText },
                 { role: 'assistant', content: responseText },
-              ]);
+              ];
+              setMessages(updatedMessages);
+              onMessagesChangeRef.current?.(updatedMessages);
 
               // Update turtle face immediately — before audio is ready
               setStateSync('speaking');
@@ -172,6 +219,13 @@ export function useSpeechConversation(
             }
           }
         }
+
+        // Stream closed without a meta event (e.g., empty transcription silently discarded).
+        // Recover from stuck 'processing' state so VAD can resume.
+        if (!receivedMeta && stateRef.current === 'processing') {
+          setStateSync('listening');
+          setMood('listening');
+        }
       } catch (err) {
         console.error('[useSpeechConversation] sendAudio error:', err);
         setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -179,7 +233,7 @@ export function useSpeechConversation(
         setMood('listening');
       }
     },
-    [setStateSync, onMission, playAudio],
+    [setStateSync, playAudio],
   );
 
   const stopRecording = useCallback(() => {

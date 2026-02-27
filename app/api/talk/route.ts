@@ -34,12 +34,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const childNameRaw = formData.get('childName');
+  const topicsRaw = formData.get('topics');
+  const childName =
+    typeof childNameRaw === 'string' && childNameRaw.trim() ? childNameRaw.trim() : undefined;
+  let topics: string[] = [];
+  if (topicsRaw && typeof topicsRaw === 'string') {
+    try { topics = JSON.parse(topicsRaw); } catch { /* ignore */ }
+  }
+
+  const difficultyProfileRaw = formData.get('difficultyProfile');
+  const missionDeclinedRaw   = formData.get('missionDeclined');
+  const difficultyProfile = (['beginner', 'intermediate', 'confident'] as const)
+    .includes(difficultyProfileRaw as 'beginner')
+      ? difficultyProfileRaw as ConversationContext['difficultyProfile']
+      : 'beginner';
+  const missionDeclined = missionDeclinedRaw === 'true';
+
   // Randomly offer a mission after at least 2 full exchanges (~30% chance per eligible turn).
   // messages holds completed turns: 2 messages = 1 exchange (user + assistant).
   const completedExchanges = Math.floor(messages.length / 2);
-  const offerMission = completedExchanges >= 2 && Math.random() < 0.3;
+  const offerMission = !missionDeclined && completedExchanges >= 2 && Math.random() < 0.3;
 
-  const context: ConversationContext = { messages, offerMission };
+  const context: ConversationContext = { messages, offerMission, childName, topics, difficultyProfile, missionDeclined };
 
   const stt = new OpenAISTTProvider();
   const tts = new ElevenLabsTTSProvider();
@@ -59,12 +76,21 @@ export async function POST(req: NextRequest) {
         // Phase 1: STT + guardrails + chat (no TTS yet)
         // Mood and text arrive here — client can update the turtle face immediately.
         const textResult = await service.processToText(audioFile, context);
+
+        // Empty userText means the audio was silent/noise — discard silently.
+        // The client's receivedMeta tracker will reset it back to 'listening'.
+        if (!textResult.userText.trim()) {
+          return;
+        }
+
         send({ type: 'meta', ...textResult });
 
-        // Phase 2: TTS — runs while client already has the mood/text
-        const audioBuffer = await tts.synthesize(textResult.responseText);
-        const base64 = Buffer.from(audioBuffer).toString('base64');
-        send({ type: 'audio', base64 });
+        // Phase 2: TTS — only synthesize when there is actual response text
+        if (textResult.responseText.trim()) {
+          const audioBuffer = await tts.synthesize(textResult.responseText);
+          const base64 = Buffer.from(audioBuffer).toString('base64');
+          send({ type: 'audio', base64 });
+        }
       } catch (err) {
         let error = 'Something went wrong.';
         if (err instanceof SpeechServiceError) {

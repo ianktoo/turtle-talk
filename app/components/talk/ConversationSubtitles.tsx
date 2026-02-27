@@ -1,111 +1,126 @@
 'use client';
 
 import type { Message } from '@/lib/speech/types';
-import type { ConversationState } from '@/app/hooks/useSpeechConversation';
+import type { VoiceSessionState } from '@/lib/speech/voice/types';
 
 interface Props {
   messages: Message[];
-  state: ConversationState;
+  state: VoiceSessionState;
 }
 
 export default function ConversationSubtitles({ messages, state }: Props) {
-  // Get the last 2 messages (most recent exchange)
-  const lastTwo = messages.slice(-2);
-  const isProcessing = state === 'processing';
-  const isEmpty = messages.length === 0 && !isProcessing;
+  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+  const lastUser      = [...messages].reverse().find((m) => m.role === 'user');
+  const isProcessing  = state === 'processing';
+  const isEmpty       = messages.length === 0 && !isProcessing;
 
   return (
     <div
       style={{
         width: '100%',
-        maxWidth: 480,
-        minHeight: 90,
-        background: 'rgba(0,0,0,0.28)',
-        backdropFilter: 'blur(12px)',
-        borderRadius: 20,
-        border: '1px solid rgba(255,255,255,0.15)',
-        padding: '14px 18px',
+        maxWidth: 440,
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
+        alignItems: 'center',
+        gap: 14,
+        padding: '0 4px',
+        minHeight: 110,
       }}
     >
       {isEmpty ? (
         <p
           style={{
-            color: 'rgba(255,255,255,0.45)',
-            fontSize: 15,
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: '1.15rem',
+            fontWeight: 600,
             margin: 0,
-            fontStyle: 'italic',
             textAlign: 'center',
-            paddingTop: 8,
+            fontStyle: 'italic',
           }}
         >
           Say something to Shelly! 🐢
         </p>
       ) : (
         <>
-          {lastTwo.map((msg, i) => {
-            const isShelly = msg.role === 'assistant';
-            return (
-              <div
-                key={i}
-                style={{
-                  animation: 'subtitleFade 0.35s ease-out both',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: isShelly ? '#fcd34d' : '#67e8f9',
-                    marginRight: 6,
-                  }}
-                >
-                  {isShelly ? 'Shelly:' : 'You:'}
-                </span>
-                <span
-                  style={{
-                    fontSize: 15,
-                    color: 'rgba(255,255,255,0.92)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {msg.content}
-                </span>
-              </div>
-            );
-          })}
-          {isProcessing && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {/* Shelly's line — dominant, large */}
+          {(lastAssistant || isProcessing) && (
+            <div style={{ textAlign: 'center', animation: 'subtitleFade 0.3s ease-out both' }}>
               <span
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
+                  display: 'block',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   color: '#fcd34d',
-                  marginRight: 6,
+                  marginBottom: 4,
                 }}
               >
-                Shelly:
+                Shelly
               </span>
-              {[0, 1, 2].map((j) => (
-                <span
-                  key={j}
+
+              {isProcessing ? (
+                /* Typing indicator */
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 4 }}>
+                  {[0, 1, 2].map((j) => (
+                    <span
+                      key={j}
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.75)',
+                        display: 'inline-block',
+                        animation: 'typingDot 1.2s ease-in-out infinite',
+                        animationDelay: `${j * 0.2}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p
                   style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.7)',
-                    display: 'inline-block',
-                    animation: `typingDot 1.2s ease-in-out infinite`,
-                    animationDelay: `${j * 0.2}s`,
+                    fontSize: 'clamp(1.2rem, 4.5vw, 1.5rem)',
+                    fontWeight: 700,
+                    color: 'white',
+                    lineHeight: 1.45,
+                    margin: 0,
+                    textShadow: '0 2px 12px rgba(0,0,0,0.45)',
                   }}
-                />
-              ))}
+                >
+                  {lastAssistant!.content}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* User's line — smaller, dimmer */}
+          {lastUser && (
+            <div style={{ textAlign: 'center', animation: 'subtitleFade 0.3s ease-out both' }}>
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: '#67e8f9',
+                  marginBottom: 3,
+                }}
+              >
+                You
+              </span>
+              <p
+                style={{
+                  fontSize: 'clamp(0.95rem, 3.5vw, 1.1rem)',
+                  fontWeight: 500,
+                  color: 'rgba(255,255,255,0.7)',
+                  lineHeight: 1.4,
+                  margin: 0,
+                }}
+              >
+                {lastUser.content}
+              </p>
             </div>
           )}
         </>

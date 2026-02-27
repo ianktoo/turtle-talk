@@ -37,6 +37,7 @@ export function useMissions() {
         title: suggestion.title,
         description: suggestion.description,
         theme: suggestion.theme,
+        difficulty: suggestion.difficulty,
         status: 'active',
         createdAt: new Date().toISOString(),
       };

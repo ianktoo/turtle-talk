@@ -1,35 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { Mic, MicOff, PhoneOff } from 'lucide-react';
 import { useMicPermission } from '@/app/hooks/useMicPermission';
-import { useSpeechConversation } from '@/app/hooks/useSpeechConversation';
+import { useVoiceSession } from '@/app/hooks/useVoiceSession';
 import { useMissions } from '@/app/hooks/useMissions';
 import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
+import { NativeVoiceProvider } from '@/lib/speech/voice/native';
 import TurtleCharacter from '@/app/components/talk/TurtleCharacter';
-import MuteButton from '@/app/components/talk/MuteButton';
-import EndButton from '@/app/components/talk/EndButton';
-import ClearButton from '@/app/components/talk/ClearButton';
 import MicPermission from '@/app/components/talk/MicPermission';
 import MissionSelectView from '@/app/components/talk/MissionSelectView';
 import ConversationSubtitles from '@/app/components/talk/ConversationSubtitles';
 import type { MissionSuggestion } from '@/lib/speech/types';
 
 const STATE_LABELS: Record<string, string> = {
-  idle: 'Getting ready...',
-  listening: 'Shelly is listening 👂',
-  recording: 'I hear you! 🎤',
+  idle:       'Getting ready...',
+  listening:  'Shelly is listening 👂',
+  recording:  'I hear you! 🎤',
   processing: 'Shelly is thinking... 🐢',
-  speaking: 'Shelly is speaking!',
-  muted: 'Microphone off 🔇',
-  ended: 'Goodbye! 🌊',
+  speaking:   'Shelly is speaking!',
+  muted:      'Microphone off 🔇',
+  ended:      'Goodbye! 🌊',
 };
 
 function ConversationView() {
   const router = useRouter();
   const { addMission, completedMissions } = useMissions();
-  const { childName, messages: savedMessages, topics, saveChildName, saveMessages, saveTopic, clearAll } =
+  const { childName, messages: savedMessages, topics, saveChildName, saveMessages, saveTopic } =
     usePersonalMemory();
 
   const [pendingMissionChoices, setPendingMissionChoices] = useState<MissionSuggestion[] | null>(null);
@@ -40,8 +38,12 @@ function ConversationView() {
     : completedMissions.length >= 2 ? 'intermediate'
     : 'beginner';
 
+  // Stable provider instance — one per mount
+  const providerRef = useRef<NativeVoiceProvider | null>(null);
+  if (!providerRef.current) providerRef.current = new NativeVoiceProvider();
+
   const { state, mood, messages, isMuted, error, toggleMute, endConversation, startListening } =
-    useSpeechConversation({
+    useVoiceSession(providerRef.current, {
       onEnd: () => router.push('/missions'),
       onMissionChoices: setPendingMissionChoices,
       initialMessages: savedMessages,
@@ -54,7 +56,6 @@ function ConversationView() {
       missionDeclined,
     });
 
-  // Auto-start listening on mount
   useEffect(() => {
     startListening();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,14 +88,14 @@ function ConversationView() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 20,
-        paddingTop: 80,
-        paddingBottom: 24,
-        paddingLeft: 16,
-        paddingRight: 16,
+        paddingTop: 64,
+        paddingBottom: 40,
+        paddingLeft: 20,
+        paddingRight: 20,
+        gap: 24,
       }}
     >
-      {/* Top header bar */}
+      {/* ── Top bar: just mute icon (left) + TurtleTalk title ── */}
       <div
         style={{
           position: 'absolute',
@@ -104,93 +105,92 @@ function ConversationView() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 20px',
+          padding: '14px 20px',
           zIndex: 20,
         }}
       >
+        {/* Mute — small, unobtrusive */}
         <button
-          onClick={() => { endConversation(); router.push('/'); }}
+          onClick={toggleMute}
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
           style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.22)',
+            background: isMuted ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.1)',
+            color: 'white',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '8px 16px',
-            borderRadius: 999,
-            border: '1px solid rgba(255,255,255,0.3)',
-            background: 'rgba(255,255,255,0.12)',
-            color: 'white',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            cursor: 'pointer',
+            justifyContent: 'center',
             backdropFilter: 'blur(4px)',
           }}
         >
-          <ArrowLeft size={16} strokeWidth={2.5} />
-          Home
+          {isMuted
+            ? <MicOff size={18} strokeWidth={2} color="#fbbf24" />
+            : <Mic    size={18} strokeWidth={2} color="white"   />}
         </button>
+
         <span
           style={{
-            color: 'white',
-            fontSize: '1.1rem',
-            fontWeight: 800,
-            textShadow: '0 2px 6px rgba(0,0,0,0.4)',
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '0.95rem',
+            fontWeight: 700,
             letterSpacing: '-0.01em',
           }}
         >
           TurtleTalk
         </span>
+
+        {/* Spacer to keep title centred */}
+        <div style={{ width: 40 }} />
       </div>
 
-      <TurtleCharacter mood={mood} size={240} />
+      {/* ── Turtle ── */}
+      <TurtleCharacter mood={mood} size={220} />
 
+      {/* ── Status label ── */}
       <p
         style={{
-          color: 'white',
-          fontSize: 18,
+          color: 'rgba(255,255,255,0.65)',
+          fontSize: '0.95rem',
           fontWeight: 600,
-          textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-          minHeight: 28,
+          margin: 0,
           textAlign: 'center',
+          minHeight: 22,
         }}
       >
         {STATE_LABELS[state] ?? ''}
       </p>
 
-      {/* Subtitle area OR error overlay */}
+      {/* ── Subtitles or error ── */}
       {error ? (
         <div
           style={{
             width: '100%',
-            maxWidth: 480,
-            background: 'rgba(0,0,0,0.28)',
-            backdropFilter: 'blur(12px)',
-            borderRadius: 20,
-            border: '1px solid rgba(255,255,255,0.15)',
-            padding: '24px 20px',
+            maxWidth: 440,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 12,
+            gap: 10,
             textAlign: 'center',
           }}
         >
-          <span style={{ fontSize: 40 }}>🐢</span>
-          <p style={{ color: 'white', fontSize: '1rem', fontWeight: 700, margin: 0 }}>
+          <span style={{ fontSize: 36 }}>🐢</span>
+          <p style={{ color: 'white', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
             Oops! Shelly had a little hiccup.
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0 }}>
-            Let&apos;s try again!
           </p>
           <button
             onClick={() => startListening()}
             style={{
               marginTop: 4,
-              padding: '10px 24px',
+              padding: '10px 28px',
               borderRadius: 999,
               border: '1px solid rgba(255,255,255,0.3)',
-              background: 'rgba(255,255,255,0.18)',
+              background: 'rgba(255,255,255,0.15)',
               color: 'white',
-              fontSize: '0.95rem',
+              fontSize: '1rem',
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -202,30 +202,29 @@ function ConversationView() {
         <ConversationSubtitles messages={messages} state={state} />
       )}
 
-      {/* Controls row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 24,
-          marginTop: 8,
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <ClearButton onClear={clearAll} />
-          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 600 }}>Start over</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <EndButton onEnd={endConversation} />
-          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 600 }}>End call</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <MuteButton isMuted={isMuted} onToggle={toggleMute} />
-          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 600 }}>
-            {isMuted ? 'Unmute' : 'Mute'}
-          </span>
-        </div>
+      {/* ── End call — the only prominent control ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <button
+          onClick={endConversation}
+          aria-label="End call"
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #dc2626, #ef4444)',
+            boxShadow: '0 6px 24px rgba(220,38,38,0.5)',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <PhoneOff size={30} color="white" strokeWidth={2} />
+        </button>
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 600 }}>
+          End call
+        </span>
       </div>
     </main>
   );
@@ -239,12 +238,8 @@ export default function TalkPage() {
     return (
       <main
         style={{
-          position: 'relative',
-          zIndex: 10,
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          position: 'relative', zIndex: 10, minHeight: '100vh',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
         <p style={{ color: 'white', fontSize: 18 }}>Loading...</p>
@@ -252,24 +247,9 @@ export default function TalkPage() {
     );
   }
 
-  if (status === 'denied') {
-    return (
-      <MicPermission
-        onGranted={requestPermission}
-        onDenied={() => router.push('/')}
-      />
-    );
+  if (status === 'denied' || status === 'prompt') {
+    return <MicPermission onGranted={requestPermission} onDenied={() => router.push('/')} />;
   }
 
-  if (status === 'prompt') {
-    return (
-      <MicPermission
-        onGranted={requestPermission}
-        onDenied={() => router.push('/')}
-      />
-    );
-  }
-
-  // status === 'granted'
   return <ConversationView />;
 }

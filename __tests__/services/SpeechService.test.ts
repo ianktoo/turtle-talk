@@ -14,10 +14,12 @@ function makeTTS(): jest.Mocked<TTSProvider> {
 function makeChat(
   text = 'Hi there!',
   mood = 'happy',
-  mission?: MissionSuggestion,
+  missionChoices?: MissionSuggestion[],
   endConversation?: boolean,
+  childName?: string,
+  topic = 'general chat',
 ): jest.Mocked<ChatProvider> {
-  return { chat: jest.fn().mockResolvedValue({ text, mood, mission, endConversation }) };
+  return { chat: jest.fn().mockResolvedValue({ text, mood, missionChoices, endConversation, childName, topic }) };
 }
 
 function makeGuardrail(safe = true, name = 'TestGuardrail'): jest.Mocked<GuardrailAgent> {
@@ -30,6 +32,12 @@ function makeGuardrail(safe = true, name = 'TestGuardrail'): jest.Mocked<Guardra
 }
 
 const ctx: ConversationContext = { messages: [] };
+
+const sampleChoices: MissionSuggestion[] = [
+  { title: 'Easy Task', description: 'Do something easy', theme: 'kind', difficulty: 'easy' },
+  { title: 'Medium Task', description: 'Do something medium', theme: 'brave', difficulty: 'medium' },
+  { title: 'Stretch Task', description: 'Do something hard', theme: 'confident', difficulty: 'stretch' },
+];
 
 describe('SpeechService', () => {
   it('calls STT, chat, and TTS in order', async () => {
@@ -163,6 +171,138 @@ describe('SpeechService', () => {
 
     expect(tts.synthesize).toHaveBeenCalledWith('Short.');
     expect(result.responseText).toBe('Short.');
+  });
+
+  describe('missionChoices', () => {
+    it('processToText forwards missionChoices from chat response', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('Great!', 'happy', sampleChoices);
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.missionChoices).toHaveLength(3);
+      expect(result.missionChoices![0].difficulty).toBe('easy');
+      expect(result.missionChoices![2].difficulty).toBe('stretch');
+    });
+
+    it('process forwards missionChoices from chat response', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('Great!', 'happy', sampleChoices);
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.process(new Blob(['audio']), ctx);
+
+      expect(result.missionChoices).toHaveLength(3);
+    });
+
+    it('processToText omits missionChoices on guardrail block (fallback)', async () => {
+      const stt = makeSTT('bad word');
+      const chat = makeChat('Hi!', 'happy', sampleChoices);
+      const tts = makeTTS();
+      const guardrail = makeGuardrail(false);
+      const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.missionChoices).toBeUndefined();
+    });
+  });
+
+  describe('personal memory fields', () => {
+    it('processToText forwards childName from chat response', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('Hi!', 'happy', undefined, undefined, 'Alice', 'turtles');
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.childName).toBe('Alice');
+      expect(result.topic).toBe('turtles');
+    });
+
+    it('processToText forwards topic from chat response', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('Hi!', 'happy', undefined, undefined, undefined, 'ocean animals');
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.topic).toBe('ocean animals');
+    });
+
+    it('processToText omits childName and topic on guardrail block (fallback)', async () => {
+      const stt = makeSTT('bad word');
+      const chat = makeChat();
+      const tts = makeTTS();
+      const guardrail = makeGuardrail(false);
+      const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(result.childName).toBeUndefined();
+      expect(result.topic).toBeUndefined();
+    });
+
+    it('process forwards childName and topic from chat response', async () => {
+      const stt = makeSTT();
+      const chat = makeChat('Hi!', 'happy', undefined, undefined, 'Ben', 'dinosaurs');
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.process(new Blob(['audio']), ctx);
+
+      expect(result.childName).toBe('Ben');
+      expect(result.topic).toBe('dinosaurs');
+    });
+  });
+
+  describe('empty transcription guard', () => {
+    it('processToText returns empty sentinel without calling chat when STT returns empty string', async () => {
+      const stt = makeSTT('');
+      const chat = makeChat();
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(chat.chat).not.toHaveBeenCalled();
+      expect(result.userText).toBe('');
+      expect(result.responseText).toBe('');
+      expect(result.mood).toBe('idle');
+    });
+
+    it('processToText returns empty sentinel without calling chat when STT returns whitespace', async () => {
+      const stt = makeSTT('   ');
+      const chat = makeChat();
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.processToText(new Blob(['audio']), ctx);
+
+      expect(chat.chat).not.toHaveBeenCalled();
+      expect(result.userText).toBe('   ');
+      expect(result.responseText).toBe('');
+    });
+
+    it('process returns empty sentinel without calling chat when STT returns empty string', async () => {
+      const stt = makeSTT('');
+      const chat = makeChat();
+      const tts = makeTTS();
+      const service = new SpeechService({ stt, tts, chat });
+
+      const result = await service.process(new Blob(['audio']), ctx);
+
+      expect(chat.chat).not.toHaveBeenCalled();
+      expect(tts.synthesize).not.toHaveBeenCalled();
+      expect(result.userText).toBe('');
+      expect(result.responseText).toBe('');
+      expect(result.mood).toBe('idle');
+    });
   });
 
   describe('endConversation flag', () => {

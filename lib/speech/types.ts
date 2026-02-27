@@ -7,6 +7,7 @@ export interface Mission {
   title: string;
   description: string;
   theme: MissionTheme;
+  difficulty?: 'easy' | 'medium' | 'stretch';
   status: 'active' | 'completed';
   createdAt: string;
   completedAt?: string;
@@ -30,6 +31,9 @@ export interface ConversationContext {
   messages: Message[];
   childName?: string;
   offerMission?: boolean;
+  topics?: string[];
+  difficultyProfile?: 'beginner' | 'intermediate' | 'confident';
+  missionDeclined?: boolean;
 }
 
 export interface STTProvider {
@@ -44,13 +48,16 @@ export interface MissionSuggestion {
   title: string;
   description: string;
   theme: MissionTheme;
+  difficulty: 'easy' | 'medium' | 'stretch';
 }
 
 export interface ChatResponse {
   text: string;
   mood: TurtleMood;
-  mission?: MissionSuggestion;
+  missionChoices?: MissionSuggestion[];
   endConversation?: boolean;
+  childName?: string;
+  topic?: string;
 }
 
 export interface ChatProvider {
@@ -69,8 +76,10 @@ export interface TextProcessResult {
   userText: string;
   responseText: string;
   mood: TurtleMood;
-  mission?: MissionSuggestion;
+  missionChoices?: MissionSuggestion[];
   endConversation?: boolean;
+  childName?: string;
+  topic?: string;
 }
 
 export interface ProcessResult extends TextProcessResult {

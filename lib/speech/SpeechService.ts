@@ -77,6 +77,12 @@ export class SpeechService {
       throw new SpeechServiceError('Speech-to-text failed', 'stt', err);
     }
 
+    // Guard: empty transcription means the audio was silent or noise-only.
+    // Return a sentinel result so the route can discard the turn cleanly.
+    if (!userText.trim()) {
+      return { userText, responseText: '', mood: 'idle' };
+    }
+
     // 2. Input guardrails
     try {
       await this.runInputGuardrails(userText);
@@ -110,8 +116,10 @@ export class SpeechService {
       userText,
       responseText: safeResponseText,
       mood: chatResponse.mood,
-      mission: chatResponse.mission,
+      missionChoices: chatResponse.missionChoices,
       endConversation: chatResponse.endConversation,
+      childName: chatResponse.childName,
+      topic: chatResponse.topic,
     };
   }
 
@@ -122,6 +130,11 @@ export class SpeechService {
       userText = await this.stt.transcribe(audio);
     } catch (err) {
       throw new SpeechServiceError('Speech-to-text failed', 'stt', err);
+    }
+
+    // Guard: empty transcription — audio was silent or noise-only.
+    if (!userText.trim()) {
+      return { userText, responseText: '', responseAudio: new ArrayBuffer(0), mood: 'idle' };
     }
 
     // 2. Input guardrails
@@ -164,8 +177,10 @@ export class SpeechService {
       responseText: safeResponseText,
       responseAudio,
       mood: chatResponse.mood,
-      mission: chatResponse.mission,
+      missionChoices: chatResponse.missionChoices,
       endConversation: chatResponse.endConversation,
+      childName: chatResponse.childName,
+      topic: chatResponse.topic,
     };
   }
 
