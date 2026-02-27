@@ -1,0 +1,23 @@
+[
+  {
+    "id": "child-1",
+    "name": "Alex",
+    "age": 7,
+    "avatar": "🦊",
+    "completedMissions": 3
+  },
+  {
+    "id": "child-2",
+    "name": "Sam",
+    "age": 9,
+    "avatar": "🐢",
+    "completedMissions": 8
+  },
+  {
+    "id": "child-3",
+    "name": "Maya",
+    "age": 6,
+    "avatar": "🦋",
+    "completedMissions": 1
+  }
+]

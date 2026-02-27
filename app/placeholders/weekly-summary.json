@@ -1,0 +1,102 @@
+{
+  "_note": "MOCK DATA — placeholder for future API integration (keyed by childId)",
+  "child-1": {
+    "childId": "child-1",
+    "weekOf": "2026-02-24",
+    "areas": [
+      {
+        "id": "social-courage",
+        "label": "Social Courage",
+        "description": "Talking to new people, joining groups, making friends",
+        "score": 3,
+        "maxScore": 5,
+        "icon": "🤝",
+        "highlights": ["Introduced themselves to a classmate", "Joined a group game at recess"]
+      },
+      {
+        "id": "performance-bravery",
+        "label": "Performance Bravery",
+        "description": "Speaking up in class, presenting, performing",
+        "score": 4,
+        "maxScore": 5,
+        "icon": "🎤",
+        "highlights": ["Answered a question in class", "Read aloud to the group"]
+      },
+      {
+        "id": "repair-courage",
+        "label": "Repair Courage",
+        "description": "Apologizing, fixing mistakes, reconnecting after conflict",
+        "score": 2,
+        "maxScore": 5,
+        "icon": "🌱",
+        "highlights": ["Said sorry to a friend after an argument"]
+      }
+    ]
+  },
+  "child-2": {
+    "childId": "child-2",
+    "weekOf": "2026-02-24",
+    "areas": [
+      {
+        "id": "social-courage",
+        "label": "Social Courage",
+        "description": "Talking to new people, joining groups, making friends",
+        "score": 5,
+        "maxScore": 5,
+        "icon": "🤝",
+        "highlights": ["Started a conversation with someone new", "Invited a peer to play"]
+      },
+      {
+        "id": "performance-bravery",
+        "label": "Performance Bravery",
+        "description": "Speaking up in class, presenting, performing",
+        "score": 3,
+        "maxScore": 5,
+        "icon": "🎤",
+        "highlights": ["Shared an idea during group time"]
+      },
+      {
+        "id": "repair-courage",
+        "label": "Repair Courage",
+        "description": "Apologizing, fixing mistakes, reconnecting after conflict",
+        "score": 4,
+        "maxScore": 5,
+        "icon": "🌱",
+        "highlights": ["Apologized and made up with a friend", "Took responsibility for a mistake"]
+      }
+    ]
+  },
+  "child-3": {
+    "childId": "child-3",
+    "weekOf": "2026-02-24",
+    "areas": [
+      {
+        "id": "social-courage",
+        "label": "Social Courage",
+        "description": "Talking to new people, joining groups, making friends",
+        "score": 1,
+        "maxScore": 5,
+        "icon": "🤝",
+        "highlights": ["Waved at a neighbour"]
+      },
+      {
+        "id": "performance-bravery",
+        "label": "Performance Bravery",
+        "description": "Speaking up in class, presenting, performing",
+        "score": 2,
+        "maxScore": 5,
+        "icon": "🎤",
+        "highlights": ["Whispered an answer to the teacher"]
+      },
+      {
+        "id": "repair-courage",
+        "label": "Repair Courage",
+        "description": "Apologizing, fixing mistakes, reconnecting after conflict",
+        "score": 1,
+        "maxScore": 5,
+        "icon": "🌱",
+        "highlights": ["Tried to share a toy"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "_note": "MOCK DATA — placeholder for future AI-generated questions per child",
+  "child-1": [
+    {
+      "id": "dq-1-1",
+      "question": "What's one thing you tried today that felt a little scary at first?",
+      "theme": "social-courage"
+    },
+    {
+      "id": "dq-1-2",
+      "question": "Did you meet anyone new this week? What was that like?",
+      "theme": "social-courage"
+    },
+    {
+      "id": "dq-1-3",
+      "question": "Can you tell me about a time you spoke up, even when it felt hard?",
+      "theme": "performance-bravery"
+    },
+    {
+      "id": "dq-1-4",
+      "question": "What would you do if you accidentally hurt someone's feelings?",
+      "theme": "repair-courage"
+    },
+    {
+      "id": "dq-1-5",
+      "question": "What's a brave thing you saw a friend do this week?",
+      "theme": "social-courage"
+    }
+  ],
+  "child-2": [
+    {
+      "id": "dq-2-1",
+      "question": "Tell me about a moment this week when you helped someone.",
+      "theme": "social-courage"
+    },
+    {
+      "id": "dq-2-2",
+      "question": "Was there anything you wanted to say but felt nervous about?",
+      "theme": "performance-bravery"
+    },
+    {
+      "id": "dq-2-3",
+      "question": "Did anything go wrong this week that you were able to fix?",
+      "theme": "repair-courage"
+    },
+    {
+      "id": "dq-2-4",
+      "question": "What's something you're proud of from this week?",
+      "theme": "performance-bravery"
+    },
+    {
+      "id": "dq-2-5",
+      "question": "How do you feel when you apologise to someone?",
+      "theme": "repair-courage"
+    }
+  ],
+  "child-3": [
+    {
+      "id": "dq-3-1",
+      "question": "What's your favourite thing to talk about with your friends?",
+      "theme": "social-courage"
+    },
+    {
+      "id": "dq-3-2",
+      "question": "Did you try something new today, even a tiny bit?",
+      "theme": "social-courage"
+    },
+    {
+      "id": "dq-3-3",
+      "question": "What does it feel like in your body when you get nervous?",
+      "theme": "performance-bravery"
+    },
+    {
+      "id": "dq-3-4",
+      "question": "Is there someone you'd like to play with more at school?",
+      "theme": "social-courage"
+    },
+    {
+      "id": "dq-3-5",
+      "question": "What makes you feel safe when you're a bit scared?",
+      "theme": "repair-courage"
+    }
+  ]
+}

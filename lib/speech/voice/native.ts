@@ -134,7 +134,8 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
       if (e.data.size > 0) this.chunks.push(e.data);
     };
     recorder.onstop = () => {
-      const blob = new Blob(this.chunks, { type: 'audio/webm' });
+      const mimeType = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(this.chunks, { type: mimeType });
       this.chunks = [];
       this.sendAudio(blob);
     };

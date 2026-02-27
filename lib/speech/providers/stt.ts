@@ -13,7 +13,12 @@ export class OpenAISTTProvider implements STTProvider {
   async transcribe(audio: Blob): Promise<string> {
     const arrayBuffer = await audio.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const file = await toFile(buffer, 'audio.webm', { type: audio.type || 'audio/webm' });
+    const mimeType = audio.type || 'audio/webm';
+    const ext = mimeType.startsWith('audio/ogg') ? 'ogg'
+      : mimeType.startsWith('audio/mp4') ? 'mp4'
+      : mimeType.startsWith('audio/wav') ? 'wav'
+      : 'webm';
+    const file = await toFile(buffer, `audio.${ext}`, { type: mimeType });
 
     const transcription = await this.client.audio.transcriptions.create({
       file,

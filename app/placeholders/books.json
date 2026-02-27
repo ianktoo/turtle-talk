@@ -1,0 +1,57 @@
+[
+  {
+    "id": "book-1",
+    "title": "The Invisible String",
+    "author": "Patrice Karst",
+    "shortDescription": "A gentle story about love that stretches across any distance.",
+    "coverEmoji": "💚",
+    "ageRange": "4–8",
+    "recommendedFor": ["social-courage"],
+    "whyRecommended": "Helps children understand that emotional bonds remain even when physically apart — great for children working on separation anxiety and social courage.",
+    "fullDescription": "When twins Liza and Mack are scared during a thunderstorm, their mom explains that they're always connected to the people they love by an invisible string made of love. This book opens a beautiful conversation about belonging and connection — especially helpful for children who feel anxious in social situations or struggle with being away from home."
+  },
+  {
+    "id": "book-2",
+    "title": "Stand Tall, Molly Lou Melon",
+    "author": "Patty Lovell",
+    "shortDescription": "Tiny but mighty Molly Lou faces a bully with unshakable confidence.",
+    "coverEmoji": "🌻",
+    "ageRange": "4–8",
+    "recommendedFor": ["performance-bravery", "social-courage"],
+    "whyRecommended": "A wonderful model of performance bravery — Molly Lou turns her quirks into superpowers, demonstrating that standing out is something to celebrate, not hide.",
+    "fullDescription": "Molly Lou is the shortest girl in her new school, with buck teeth and a voice like a bullfrog — but her grandmother taught her to believe in herself. When a bully tries to make fun of her, she uses confidence and kindness to turn the situation around. A powerful story for children who need encouragement to show up and be seen."
+  },
+  {
+    "id": "book-3",
+    "title": "Enemy Pie",
+    "author": "Derek Munson",
+    "shortDescription": "A dad's magical 'enemy pie' recipe holds an unexpected lesson about friendship.",
+    "coverEmoji": "🥧",
+    "ageRange": "5–9",
+    "recommendedFor": ["repair-courage", "social-courage"],
+    "whyRecommended": "Directly addresses how children can repair relationships and turn perceived enemies into friends — ideal for building repair courage and empathy.",
+    "fullDescription": "It was going to be the perfect summer — until Jeremy Ross moved in. Dad offers to make 'enemy pie', but there's one rule: you have to spend a whole day with your enemy first. This charming story shows how misunderstandings dissolve when we take time to actually know someone, making it a perfect conversation-starter for repair courage and conflict resolution."
+  },
+  {
+    "id": "book-4",
+    "title": "The Most Magnificent Thing",
+    "author": "Ashley Spires",
+    "shortDescription": "A girl sets out to make the most magnificent thing — and discovers that failure is part of the process.",
+    "coverEmoji": "🔧",
+    "ageRange": "4–8",
+    "recommendedFor": ["performance-bravery"],
+    "whyRecommended": "Tackles frustration, persistence, and the courage to try again after failure — excellent for children who avoid challenges out of fear of getting it wrong.",
+    "fullDescription": "A young girl has a great idea and sets out to make the most magnificent thing. But after trying and failing many times, she gets really mad and quits. A walk with her dog helps her look at things differently, and she realises the answer was there all along. A relatable, funny story about perseverance and the creative process."
+  },
+  {
+    "id": "book-5",
+    "title": "Each Kindness",
+    "author": "Jacqueline Woodson",
+    "shortDescription": "A quietly powerful story about the ripple effect of kindness — and what happens when we wait too long.",
+    "coverEmoji": "🕊️",
+    "ageRange": "6–10",
+    "recommendedFor": ["repair-courage", "social-courage"],
+    "whyRecommended": "Encourages children to recognise missed opportunities for kindness and connection, motivating proactive repair courage and empathy in peer relationships.",
+    "fullDescription": "When a new girl named Maya arrives at school wearing ragged clothes, Chloe and her friends refuse to play with her. Then one day Maya stops coming to school. Their teacher shows the class how even small acts of kindness can change the world. A moving, beautifully illustrated book that invites deep conversations about regret, compassion, and the chance to do better."
+  }
+]
