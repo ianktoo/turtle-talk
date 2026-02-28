@@ -97,3 +97,28 @@ test('start() emits error when NEXT_PUBLIC_VAPI_ASSISTANT_ID is missing', async 
   expect(errors).toHaveLength(1);
   expect(errors[0]).toMatch(/NEXT_PUBLIC_VAPI_ASSISTANT_ID/);
 });
+
+test('start() emits error when vapi.start() rejects', async () => {
+  mockStart.mockRejectedValueOnce(new Error('Vapi connection refused'));
+  const provider = new VapiVoiceProvider();
+  const errors: string[] = [];
+  provider.on('error', (msg: string) => errors.push(msg));
+  await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: null });
+  expect(errors).toHaveLength(1);
+  expect(errors[0]).toMatch(/Vapi connection refused/);
+});
+
+test('start() passes activeMission in metadata', async () => {
+  const mission = { id: 'm1', title: 'Read a book', description: 'Read for 10 minutes', theme: 'curious' as const, difficulty: 'easy' as const, status: 'active' as const, createdAt: '2026-01-01' };
+  const provider = new VapiVoiceProvider();
+  await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: mission });
+  const arg = mockStart.mock.calls[0][0];
+  expect(arg.metadata.activeMission).toEqual(mission);
+});
+
+test('start() uses "friend" as fallback childName in variableValues', async () => {
+  const provider = new VapiVoiceProvider();
+  await provider.start({});
+  const arg = mockStart.mock.calls[0][0];
+  expect(arg.assistantOverrides.variableValues.childName).toBe('friend');
+});

@@ -44,43 +44,47 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
     // Dynamic import keeps @vapi-ai/web out of the server bundle
     const gen = ++this._generation;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vapiModule = await import('@vapi-ai/web') as any;
-    // Handle both real ESM (vapiModule.default = Vapi) and CJS interop in Jest tests
-    // (vapiModule.default.default = Vapi when mock lacks __esModule: true).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Vapi: new (key: string) => any = vapiModule.default?.default ?? vapiModule.default;
-    // If stop() was called while we were waiting for the import (React Strict Mode
-    // double-invoke, fast unmount, etc.), bail out — don't create a second SDK instance.
-    if (this._generation !== gen) return;
-    this.vapi = new Vapi(publicKey);
-    this.bindVapiEvents(options, gen);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vapiModule = await import('@vapi-ai/web') as any;
+      // If stop() was called while we were waiting for the import (React Strict Mode
+      // double-invoke, fast unmount, etc.), bail out — don't create a second SDK instance.
+      if (this._generation !== gen) return;
+      // Handle both real ESM (vapiModule.default = Vapi) and CJS interop in Jest tests
+      // (vapiModule.default.default = Vapi when mock lacks __esModule: true).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Vapi: new (key: string) => any = vapiModule.default?.default ?? vapiModule.default;
+      this.vapi = new Vapi(publicKey);
+      this.bindVapiEvents(gen);
 
-    const llmBase =
-      process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
-      (typeof window !== 'undefined' ? window.location.origin : '');
+      const llmBase =
+        process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : '');
 
-    await this.vapi.start({
-      assistantId,
-      assistantOverrides: {
-        model: {
-          provider: 'custom-llm',
-          model: 'shelly',
-          url: `${llmBase}/api/vapi/llm`,
-          metadataSendMode: 'variable',
+      await this.vapi.start({
+        assistantId,
+        assistantOverrides: {
+          model: {
+            provider: 'custom-llm',
+            model: 'shelly',
+            url: `${llmBase}/api/vapi/llm`,
+            metadataSendMode: 'variable',
+          },
+          variableValues: {
+            childName: options.childName ?? 'friend',
+          },
         },
-        variableValues: {
-          childName: options.childName ?? 'friend',
+        // top-level metadata — Vapi forwards this to /api/vapi/llm as body.metadata
+        metadata: {
+          childName: options.childName ?? null,
+          topics: options.topics ?? [],
+          difficultyProfile: options.difficultyProfile ?? 'beginner',
+          activeMission: options.activeMission ?? null,
         },
-      },
-      // top-level metadata — Vapi forwards this to /api/vapi/llm as body.metadata
-      metadata: {
-        childName: options.childName ?? null,
-        topics: options.topics ?? [],
-        difficultyProfile: options.difficultyProfile ?? 'beginner',
-        activeMission: options.activeMission ?? null,
-      },
-    });
+      });
+    } catch (err) {
+      this.emit('error', (err as Error)?.message ?? 'Failed to start Vapi');
+    }
   }
 
   stop(): void {
@@ -106,7 +110,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
   // ---------------------------------------------------------------------------
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private bindVapiEvents(_options: VoiceSessionOptions, gen: number): void {
+  private bindVapiEvents(gen: number): void {
     const v = this.vapi;
     // Guard: if _generation has advanced past this session's gen, the event is stale
     const alive = () => this._generation === gen;
