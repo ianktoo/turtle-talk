@@ -99,6 +99,8 @@ export class GeminiTTSProvider implements TTSProvider {
     const audioBuffer = Buffer.from(part.inlineData.data, 'base64');
     const mimeType: string = part.inlineData.mimeType ?? '';
 
+    console.log(`[GeminiTTS] mimeType="${mimeType}" bytes=${audioBuffer.byteLength}`);
+
     // Raw PCM needs a WAV header; wav can be returned as-is
     const finalBuffer = (mimeType.startsWith('audio/L16') || mimeType.startsWith('audio/pcm'))
       ? pcmToWav(audioBuffer)

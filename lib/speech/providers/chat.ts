@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { tool } from '@langchain/core/tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import type { ChatProvider, ChatResponse, ConversationContext, MissionSuggestion, MissionTheme, TurtleMood } from '../types';
@@ -135,11 +136,13 @@ BAD example: "That's so wonderful that you have a dog! Dogs are amazing pets and
 TOOL RULES:
 1. Call report_mood every turn.
 2. Call note_child_info when you learn the child's name or the turn's topic.
-3. After about 4-6 exchanges, or when the child says goodbye, call BOTH end_conversation AND propose_missions together. Always.
-4. Call acknowledge_mission_progress if the child mentions their active challenge.
+3. Call acknowledge_mission_progress if the child mentions their active challenge.
 
-ENDING RULE:
-Your farewell text = one warm sentence. Then call end_conversation + propose_missions with 3 challenges.`;
+ENDING RULE — read carefully:
+- You MUST NOT call end_conversation or propose_missions until the child has sent at least 4 messages.
+- NEVER end on the first message, second message, or third message. No exceptions.
+- After the 4th child message or later, end naturally when the conversation reaches a warm close OR the child says goodbye/bye/see you.
+- When ending: say one warm farewell sentence, then call BOTH end_conversation AND propose_missions together.`;
 
 function buildSystemPrompt(ctx: ConversationContext): string {
   let prompt = ctx.childName
@@ -299,7 +302,20 @@ export class OpenAIChatProvider extends BaseChatProvider {
   }
 }
 
-export function createChatProvider(name: 'anthropic' | 'openai' = 'anthropic'): ChatProvider {
+export class GeminiChatProvider extends BaseChatProvider {
+  constructor(apiKey?: string) {
+    super(
+      new ChatGoogleGenerativeAI({
+        model: speechConfig.chat.geminiModel,
+        apiKey: apiKey ?? process.env.GEMINI_API_KEY,
+        maxOutputTokens: speechConfig.chat.maxTokens,
+      }),
+    );
+  }
+}
+
+export function createChatProvider(name: 'anthropic' | 'openai' | 'gemini' = 'anthropic'): ChatProvider {
   if (name === 'openai') return new OpenAIChatProvider();
+  if (name === 'gemini') return new GeminiChatProvider();
   return new AnthropicChatProvider();
 }

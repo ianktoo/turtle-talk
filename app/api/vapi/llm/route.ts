@@ -34,10 +34,17 @@ export async function POST(req: NextRequest) {
   const rawMessages = (body.messages ?? []).filter((m) => m.role !== 'system');
   const meta = body.metadata ?? {};
 
+  console.log('[vapi/llm] raw messages received:', JSON.stringify(body.messages ?? [], null, 2));
+  console.log('[vapi/llm] metadata:', JSON.stringify(meta));
+
   // Extract context from Vapi metadata (passed via model.metadata in VapiVoiceProvider)
-  const childName     = typeof meta.childName === 'string' ? meta.childName : undefined;
-  const topics        = Array.isArray(meta.topics) ? (meta.topics as string[]) : [];
-  const activeMission = meta.activeMission ?? null;
+  const childName        = typeof meta.childName === 'string' ? meta.childName : undefined;
+  const topics           = Array.isArray(meta.topics) ? (meta.topics as string[]) : [];
+  const activeMission    = (meta.activeMission ?? null) as ConversationContext['activeMission'];
+  const difficultyProfile = (['beginner', 'intermediate', 'confident'] as const)
+    .includes(meta.difficultyProfile as 'beginner')
+      ? meta.difficultyProfile as ConversationContext['difficultyProfile']
+      : 'beginner';
 
   // Last user message is the one we respond to
   const lastUser = [...rawMessages].reverse().find((m) => m.role === 'user');
@@ -57,7 +64,12 @@ export async function POST(req: NextRequest) {
     messages: history,
     childName,
     topics,
+    difficultyProfile,
+    activeMission,
   };
+
+  console.log('[vapi/llm] lastUser:', lastUser.content);
+  console.log('[vapi/llm] history length:', history.length, JSON.stringify(history));
 
   // --- Guardrail + LLM ---
   const guardrail = new ChildSafeGuardrail();
@@ -71,18 +83,33 @@ export async function POST(req: NextRequest) {
     const chat = createChatProvider(speechConfig.chat.provider);
     const response = await chat.chat(lastUser.content, context);
 
+    console.log('[vapi/llm] LLM response:', JSON.stringify({
+      text: response.text,
+      mood: response.mood,
+      endConversation: response.endConversation,
+      missionChoices: response.missionChoices?.length,
+      childName: response.childName,
+      topic: response.topic,
+    }));
+
     const outputCheck = await guardrail.checkOutput(response.text);
     const text = outputCheck.sanitized ?? response.text;
 
     const tools: ToolCall[] = [toolCall('reportMood', { mood: response.mood })];
 
-    if (response.missionChoices?.length) {
+    // Guard: LLM must not end the conversation before the child has sent at least 3 prior messages.
+    // (history contains prior turns; the current turn is not yet in history)
+    const priorUserCount = history.filter((m) => m.role === 'user').length;
+    const canEnd = priorUserCount >= 3;
+
+    if (canEnd && response.missionChoices?.length) {
       tools.push(toolCall('proposeMissions', { choices: response.missionChoices }));
     }
-    if (response.endConversation) {
+    if (canEnd && response.endConversation) {
       tools.push(toolCall('reportEndConversation', {}));
     }
 
+    console.log('[vapi/llm] returning tools:', tools.map(t => t.function.name));
     return openAIResponse(text, tools);
   } catch (err) {
     console.error('[/api/vapi/llm] LLM error:', err);

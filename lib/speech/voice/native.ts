@@ -258,6 +258,14 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
           }
           resolve();
         };
+      }).catch((err) => {
+        console.error('[NativeVoiceProvider] decodeAudioData failed:', err);
+        playCtx.close();
+        if (this.state !== 'ended' && this.state !== 'muted') {
+          this.setState('listening');
+          this.emit('moodChange', 'listening');
+        }
+        resolve();
       });
     });
   }

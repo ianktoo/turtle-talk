@@ -7,7 +7,7 @@ import { useMicPermission } from '@/app/hooks/useMicPermission';
 import { useVoiceSession } from '@/app/hooks/useVoiceSession';
 import { useMissions } from '@/app/hooks/useMissions';
 import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
-import { NativeVoiceProvider } from '@/lib/speech/voice/native';
+import { VapiVoiceProvider } from '@/lib/speech/voice/vapi';
 import TurtleCharacter from '@/app/components/talk/TurtleCharacter';
 import MicPermission from '@/app/components/talk/MicPermission';
 import MissionSelectView from '@/app/components/talk/MissionSelectView';
@@ -45,8 +45,8 @@ function ConversationView() {
   const activeMission = activeMissions[0] ?? null;
 
   // Stable provider instance — one per mount
-  const providerRef = useRef<NativeVoiceProvider | null>(null);
-  if (!providerRef.current) providerRef.current = new NativeVoiceProvider();
+  const providerRef = useRef<VapiVoiceProvider | null>(null);
+  if (!providerRef.current) providerRef.current = new VapiVoiceProvider();
 
   const { state, mood, messages, isMuted, error, toggleMute, endConversation, startListening } =
     useVoiceSession(providerRef.current, {

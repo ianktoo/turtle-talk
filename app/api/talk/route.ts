@@ -96,13 +96,21 @@ export async function POST(req: NextRequest) {
           send({ type: 'audio', base64 });
         }
       } catch (err) {
+        const stageModels: Record<string, string> = {
+          stt:  `${speechConfig.stt.provider}/${speechConfig.stt.provider === 'gemini' ? speechConfig.stt.geminiModel : speechConfig.stt.model}`,
+          chat: `${speechConfig.chat.provider}/${speechConfig.chat.provider === 'gemini' ? speechConfig.chat.geminiModel : speechConfig.chat.provider === 'openai' ? speechConfig.chat.openaiModel : speechConfig.chat.anthropicModel}`,
+          tts:  `${speechConfig.tts.provider}/${speechConfig.tts.provider === 'gemini' ? speechConfig.tts.geminiModel : speechConfig.tts.model}`,
+        };
+
         let error = 'Something went wrong.';
         if (err instanceof SpeechServiceError) {
-          console.error(`[talk/route] SpeechServiceError stage="${err.stage}":`, err.message, err.cause);
-          error = isDev ? `Speech processing failed. (stage: ${err.stage})` : 'Speech processing failed.';
+          const model = stageModels[err.stage] ?? err.stage;
+          const causeMsg = err.cause instanceof Error ? err.cause.message : String(err.cause ?? '');
+          console.error(`[talk/route] SpeechServiceError stage="${err.stage}" model="${model}":`, causeMsg);
+          error = `[${model}] ${causeMsg || err.message}`;
         } else {
           console.error('[talk/route] Unexpected error:', err);
-          if (isDev && err instanceof Error) error = err.message;
+          if (err instanceof Error) error = err.message;
         }
         send({ type: 'error', error });
       } finally {
