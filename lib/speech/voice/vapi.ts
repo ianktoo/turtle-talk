@@ -12,7 +12,8 @@ import { BaseVoiceProvider } from './base';
  * Our server handles: guardrails + LLM (Claude) via /api/vapi/llm.
  * Mood and mission choices flow back as Vapi function-call events.
  *
- * Required env var: NEXT_PUBLIC_VAPI_PUBLIC_KEY
+ * Required env vars: NEXT_PUBLIC_VAPI_PUBLIC_KEY, NEXT_PUBLIC_VAPI_ASSISTANT_ID
+ * Optional env var:  NEXT_PUBLIC_CUSTOM_LLM_URL (set to ngrok URL for local dev)
  */
 export class VapiVoiceProvider extends BaseVoiceProvider {
   readonly name = 'vapi';
@@ -20,6 +21,9 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private vapi: any = null;
   private messages: Message[] = [];
+  // Generation counter: incremented on every start/stop so stale call-end events
+  // from old Vapi SDK instances (e.g. React Strict Mode double-invoke) are ignored.
+  private _generation = 0;
 
   async start(options: VoiceSessionOptions): Promise<void> {
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
@@ -28,48 +32,59 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
       return;
     }
 
+    const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
+    if (!assistantId) {
+      this.emit('error', 'NEXT_PUBLIC_VAPI_ASSISTANT_ID is not set');
+      return;
+    }
+
     if (options.initialMessages?.length) {
       this.messages = [...options.initialMessages];
     }
 
     // Dynamic import keeps @vapi-ai/web out of the server bundle
-    const { default: Vapi } = await import('@vapi-ai/web');
+    const gen = ++this._generation;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vapiModule = await import('@vapi-ai/web') as any;
+    // Handle both real ESM (vapiModule.default = Vapi) and CJS interop in Jest tests
+    // (vapiModule.default.default = Vapi when mock lacks __esModule: true).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Vapi: new (key: string) => any = vapiModule.default?.default ?? vapiModule.default;
+    // If stop() was called while we were waiting for the import (React Strict Mode
+    // double-invoke, fast unmount, etc.), bail out — don't create a second SDK instance.
+    if (this._generation !== gen) return;
     this.vapi = new Vapi(publicKey);
-    this.bindVapiEvents(options);
+    this.bindVapiEvents(options, gen);
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const llmBase =
+      process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : '');
 
     await this.vapi.start({
-      transcriber: {
-        provider: 'deepgram',
-        model: 'nova-2',
-        language: 'en-US',
-      },
-      model: {
-        provider: 'custom-llm',
-        model: 'shelly',
-        url: `${origin}/api/vapi/llm`,
-        // Pass child context so the LLM endpoint can personalise responses
-        metadata: {
-          childName: options.childName ?? null,
-          topics: options.topics ?? [],
-          difficultyProfile: options.difficultyProfile ?? 'beginner',
-          activeMission: options.activeMission ?? null,
+      assistantId,
+      assistantOverrides: {
+        model: {
+          provider: 'custom-llm',
+          model: 'shelly',
+          url: `${llmBase}/api/vapi/llm`,
+          metadataSendMode: 'variable',
+        },
+        variableValues: {
+          childName: options.childName ?? 'friend',
         },
       },
-      voice: {
-        provider: 'elevenlabs',
-        voiceId: process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL',
-        model: 'eleven_turbo_v2_5',
-        stability: 0.75,
-        similarityBoost: 0.75,
-        speed: 0.9,
+      // top-level metadata — Vapi forwards this to /api/vapi/llm as body.metadata
+      metadata: {
+        childName: options.childName ?? null,
+        topics: options.topics ?? [],
+        difficultyProfile: options.difficultyProfile ?? 'beginner',
+        activeMission: options.activeMission ?? null,
       },
-      name: 'Shelly',
     });
   }
 
   stop(): void {
+    this._generation++; // invalidate all handlers from the current session
     this.vapi?.stop();
     this.vapi = null;
   }
@@ -91,15 +106,19 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
   // ---------------------------------------------------------------------------
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private bindVapiEvents(_options: VoiceSessionOptions): void {
+  private bindVapiEvents(_options: VoiceSessionOptions, gen: number): void {
     const v = this.vapi;
+    // Guard: if _generation has advanced past this session's gen, the event is stale
+    const alive = () => this._generation === gen;
 
     v.on('call-start', () => {
+      if (!alive()) return;
       this.emit('stateChange', 'listening');
       this.emit('moodChange', 'listening');
     });
 
     v.on('call-end', () => {
+      if (!alive()) return;
       this.emit('stateChange', 'ended');
       this.emit('moodChange', 'idle');
       this.emit('end');
@@ -107,18 +126,21 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
     // User began speaking
     v.on('speech-start', () => {
+      if (!alive()) return;
       this.emit('stateChange', 'recording');
       this.emit('moodChange', 'listening');
     });
 
     // User finished speaking — Vapi will now call our LLM
     v.on('speech-end', () => {
+      if (!alive()) return;
       this.emit('stateChange', 'processing');
       this.emit('moodChange', 'confused');
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     v.on('message', (message: any) => {
+      if (!alive()) return;
       // Final transcript lines → build our messages array
       if (message.type === 'transcript' && message.transcriptType === 'final') {
         const role = message.role as 'user' | 'assistant';
@@ -161,6 +183,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     v.on('error', (e: any) => {
+      if (!alive()) return;
       this.emit('error', (e as Error)?.message ?? 'Vapi error');
     });
   }
