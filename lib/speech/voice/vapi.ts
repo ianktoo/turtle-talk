@@ -70,6 +70,14 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
             url: `${llmBase}/api/vapi/llm`,
             metadataSendMode: 'variable',
           },
+          voice: {
+            provider: '11labs',
+            voiceId: process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL',
+            model: 'eleven_turbo_v2_5',
+            stability: 0.75,
+            similarityBoost: 0.75,
+            speed: 0.9,
+          },
           variableValues: {
             childName: options.childName ?? 'friend',
           },

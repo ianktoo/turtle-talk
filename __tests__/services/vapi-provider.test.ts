@@ -122,3 +122,20 @@ test('start() uses "friend" as fallback childName in variableValues', async () =
   const arg = mockStart.mock.calls[0][0];
   expect(arg.assistantOverrides.variableValues.childName).toBe('friend');
 });
+
+test('start() passes ElevenLabs voice override in assistantOverrides', async () => {
+  process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID = 'test-voice-id';
+  const provider = new VapiVoiceProvider();
+  await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: null });
+  const arg = mockStart.mock.calls[0][0];
+  expect(arg.assistantOverrides.voice.provider).toBe('11labs');
+  expect(arg.assistantOverrides.voice.voiceId).toBe('test-voice-id');
+  delete process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID;
+});
+
+test('start() uses default ElevenLabs voice ID when env var is unset', async () => {
+  const provider = new VapiVoiceProvider();
+  await provider.start({});
+  const arg = mockStart.mock.calls[0][0];
+  expect(arg.assistantOverrides.voice.voiceId).toBe('EXAVITQu4vr4xnSDxMaL');
+});
