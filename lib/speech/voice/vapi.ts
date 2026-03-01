@@ -28,13 +28,16 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
   async start(options: VoiceSessionOptions): Promise<void> {
     console.info('[Shelly] vapi start');
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
+    const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
+    // #region agent log
+    fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:start',message:'Vapi env check',data:{hasPublicKey:!!publicKey,hasAssistantId:!!assistantId,assistantIdLength:(assistantId||'').length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     if (!publicKey) {
       console.info('[Shelly] vapi: missing env (key)');
       this.emit('error', 'NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set');
       return;
     }
 
-    const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
     if (!assistantId) {
       console.info('[Shelly] vapi: missing env (assistant)');
       this.emit('error', 'NEXT_PUBLIC_VAPI_ASSISTANT_ID is not set');
@@ -67,6 +70,9 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
       const llmBase =
         process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
         (typeof window !== 'undefined' ? window.location.origin : '');
+      // #region agent log
+      fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:start',message:'LLM URL base',data:{hasCustomUrl:!!process.env.NEXT_PUBLIC_CUSTOM_LLM_URL,llmHostIsLocalhost:typeof llmBase==='string'&&(llmBase.includes('localhost')||llmBase.includes('127.0.0.1'))},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
 
       await this.vapi.start(assistantId, {
         model: {
@@ -108,9 +114,16 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
   stop(): void {
     console.info('[Shelly] vapi stop');
+    // #region agent log
+    fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:stop',message:'Vapi stop() entered',data:{hadVapi:!!this.vapi},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
     this._generation++; // invalidate all handlers from the current session
     this.vapi?.stop();
     this.vapi = null;
+    // Emit ended state immediately so UI updates even if Vapi never sends call-end (e.g. SDK hanging)
+    this.emit('stateChange', 'ended');
+    this.emit('moodChange', 'idle');
+    this.emit('end');
   }
 
   setMuted(muted: boolean): void {

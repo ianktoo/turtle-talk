@@ -175,6 +175,26 @@ function ConversationView() {
         {STATE_LABELS[state] ?? ''}
       </p>
 
+      {/* ── Localhost + Vapi: LLM unreachable so Shelly won't respond ── */}
+      {state === 'listening' &&
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+        providerRef.current?.name === 'vapi' && (
+        <p
+          style={{
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: '0.8rem',
+            margin: 0,
+            textAlign: 'center',
+            maxWidth: 320,
+            lineHeight: 1.4,
+          }}
+        >
+          On localhost, Shelly can&apos;t respond unless your app is exposed. Set{' '}
+          <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: 4 }}>NEXT_PUBLIC_CUSTOM_LLM_URL</code> to a public URL (e.g. Cloudflare Tunnel or localtunnel) and restart. Or test voice on your live site (e.g. turtletalk.io).
+        </p>
+      )}
+
       {/* ── Subtitles or error ── */}
       {error ? (
         <div
