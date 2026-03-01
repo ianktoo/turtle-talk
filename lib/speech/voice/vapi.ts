@@ -113,8 +113,14 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
       });
       console.info('[Shelly] vapi: call started');
     } catch (err) {
-      console.info('[Shelly] vapi: start error');
-      this.emit('error', (err as Error)?.message ?? 'Failed to start Vapi');
+      const errObj = err as Error & { response?: { status?: number; data?: unknown }; body?: unknown };
+      console.warn('[Shelly] vapi: start error', err, errObj?.response ?? errObj?.body ?? '');
+      const msg =
+        (errObj?.response as { message?: string })?.message
+        ?? errObj?.message
+        ?? (typeof errObj?.body === 'object' ? JSON.stringify(errObj.body) : errObj?.body)
+        ?? 'Failed to start Vapi';
+      this.emit('error', String(msg));
       this.emit('stateChange', 'idle');
       this.emit('moodChange', 'idle');
     }
@@ -236,7 +242,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     v.on('error', (e: any) => {
       if (!alive()) return;
-      console.info('[Shelly] vapi: error event');
+      console.info('[Shelly] vapi: error event', e);
       const msg = (e as Error)?.message
         ?? (typeof e === 'object' ? JSON.stringify(e) : String(e))
         ?? 'Vapi error';
