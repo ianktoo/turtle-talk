@@ -43,3 +43,5 @@
 {"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi start payload (400 debug)","data":{"llmUrl":"https://turtletalk.io/api/vapi/llm","assistantIdLength":36,"urlIsHttps":true},"timestamp":1772338181978,"hypothesisId":"H4"}
 {"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi env check","data":{"hasPublicKey":true,"hasAssistantId":true,"assistantIdLength":36},"timestamp":1772338355696,"hypothesisId":"H1"}
 {"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi start payload (400 debug)","data":{"llmUrl":"https://turtletalk.io/api/vapi/llm","assistantIdLength":36,"urlIsHttps":true},"timestamp":1772338355721,"hypothesisId":"H4"}
+{"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi env check","data":{"hasPublicKey":true,"hasAssistantId":true,"assistantIdLength":36},"timestamp":1772338970090,"hypothesisId":"H1"}
+{"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi start payload (400 debug)","data":{"llmUrl":"https://turtletalk.io/api/vapi/llm","assistantIdLength":36,"urlIsHttps":true},"timestamp":1772338970107,"hypothesisId":"H4"}

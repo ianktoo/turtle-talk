@@ -29,9 +29,6 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
     console.info('[Shelly] vapi start');
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
     const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
-    // #region agent log
-    fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:start',message:'Vapi env check',data:{hasPublicKey:!!publicKey,hasAssistantId:!!assistantId,assistantIdLength:(assistantId||'').length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     if (!publicKey) {
       console.info('[Shelly] vapi: missing env (key)');
       this.emit('error', 'NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set');
@@ -70,10 +67,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
       const llmBase =
         process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
         (typeof window !== 'undefined' ? window.location.origin : '');
-      // #region agent log
       const llmUrl = `${llmBase}/api/vapi/llm`;
-      fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:start',message:'Vapi start payload (400 debug)',data:{llmUrl,assistantIdLength:(assistantId||'').length,urlIsHttps:llmUrl.startsWith('https://')},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-      // #endregion
 
       if (!llmUrl.startsWith('https://')) {
         this.emit('error', 'Vapi requires an HTTPS URL for the assistant. Set NEXT_PUBLIC_CUSTOM_LLM_URL to your HTTPS tunnel URL (e.g. Cloudflare Tunnel) or test on your live site (e.g. turtletalk.io).');
