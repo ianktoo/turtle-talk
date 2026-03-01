@@ -85,8 +85,8 @@ export class SupabaseDatabaseService implements DatabaseService {
       .from('child_memory')
       .select('*')
       .eq('child_id', childId)
-      .single();
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = row not found
+      .maybeSingle();
+    if (error) throw error;
     if (!data) return { childId, childName: null, messages: [], topics: [] };
     return {
       childId,
