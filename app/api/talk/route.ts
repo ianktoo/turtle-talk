@@ -1,14 +1,23 @@
 import { NextRequest } from 'next/server';
 
 export const maxDuration = 60; // seconds — STT + LLM + TTS can exceed Vercel's 10s default
+import { logAgent } from '@/lib/speech/log';
+import { startVoiceSessionLogWriter } from '@/lib/speech/log/writer-server';
 import { SpeechService } from '@/lib/speech/SpeechService';
 import { OpenAISTTProvider, GeminiSTTProvider } from '@/lib/speech/providers/stt';
 import { ElevenLabsTTSProvider, GeminiTTSProvider } from '@/lib/speech/providers/tts';
 import { createChatProvider } from '@/lib/speech/providers/chat';
 import { ChildSafeGuardrail } from '@/lib/speech/guardrails/ChildSafeGuardrail';
 import type { ConversationContext, Message } from '@/lib/speech/types';
-import { SpeechServiceError } from '@/lib/speech/errors';
+import { SpeechServiceError, isProviderUnusualActivityError } from '@/lib/speech/errors';
 import { speechConfig } from '@/lib/speech/config';
+import { debugLog } from '@/lib/speech/debug-log';
+
+/** When the LLM returns empty responseText, we send this so the user always gets a spoken reply. */
+const FALLBACK_EMPTY_RESPONSE = "Hmm, I didn't quite get that. Can you say it again?";
+
+// Start background log writer (server-only; no-op if ENABLE_SESSION_LOGGING is not set)
+startVoiceSessionLogWriter(logAgent);
 
 export async function POST(req: NextRequest) {
   let formData: FormData;
@@ -33,6 +42,9 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Invalid messages JSON' }, { status: 400 });
     }
   }
+  // Cap history so context is bounded (matches client and DB trim).
+  const MAX_HISTORY_MESSAGES = 20;
+  messages = messages.slice(-MAX_HISTORY_MESSAGES);
 
   const childNameRaw = formData.get('childName');
   const topicsRaw = formData.get('topics');
@@ -65,7 +77,6 @@ export async function POST(req: NextRequest) {
   const service = new SpeechService({ stt, tts, chat, guardrails: [guardrail] });
 
   const encoder = new TextEncoder();
-  const isDev = process.env.NODE_ENV === 'development';
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -73,29 +84,110 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
 
       try {
-        // Phase 1: STT + guardrails + chat (no TTS yet)
-        // Mood and text arrive here — client can update the turtle face immediately.
-        const textResult = await service.processToText(audioFile, context);
-
-        // Empty userText means the audio was silent/noise — discard silently.
-        // The client's receivedMeta tracker will reset it back to 'listening'.
-        if (!textResult.userText.trim()) {
+        console.info('[Shelly] route: stream start');
+        logAgent.logEvent('api_talk', 'stream_start', { blobSize: audioFile.size });
+        // #region agent log
+        debugLog({ location: 'app/api/talk/route.ts:stream_start', message: 'route received audio', data: { blobSize: audioFile.size, blobType: audioFile.type }, hypothesisId: 'H3' });
+        // #endregion
+        // Phase 0: STT first so we can send user_text immediately (UI shows "You said: ..." while LLM runs)
+        let userText: string;
+        try {
+          userText = await stt.transcribe(audioFile);
+        } catch (err) {
+          throw new SpeechServiceError('Speech-to-text failed', 'stt', err);
+        }
+        if (!userText.trim()) {
+          logAgent.logEvent('api_talk', 'early_exit_empty_user');
+          debugLog({ location: 'app/api/talk/route.ts:early_exit', message: 'early exit empty user', hypothesisId: 'H5' });
+          console.info('[Shelly] route: empty user text, closing');
           return;
         }
+        send({ type: 'user_text', userText });
+        // Phase 1: guardrails + chat (no STT — we already have userText)
+        const textResult = await service.processToText(audioFile, context, { preTranscribedText: userText });
+        console.info('[Shelly] route: processToText done');
+        logAgent.logEvent('api_talk', 'processToText_done', {
+          userTextLen: textResult.userText.length,
+          responseLen: textResult.responseText?.length ?? 0,
+        });
+        // #region agent log
+        const earlyExit = !textResult.userText.trim();
+        debugLog({ location: 'app/api/talk/route.ts:processToText_done', message: 'processToText result', data: { userTextLen: textResult.userText.length, responseLen: textResult.responseText?.length ?? 0, userTextSnippet: (textResult.userText || '').slice(0, 80), earlyExit }, hypothesisId: 'H1,H5' });
+        // #endregion
+
+        // When LLM returns empty, use a fallback phrase so we always send meta + TTS
+        if (!textResult.responseText?.trim()) {
+          console.info('[Shelly] route: empty response, using fallback phrase');
+          textResult.responseText = FALLBACK_EMPTY_RESPONSE;
+          textResult.mood = 'confused';
+        }
+
+        // Log this turn (user + LLM) for conversation history visibility (console + debug ingest)
+        const userSnippet = (textResult.userText || '').slice(0, 100);
+        const responseSnippet = (textResult.responseText || '').slice(0, 100);
+        console.info('[Shelly] turn — user:', userSnippet, '| response:', responseSnippet);
+        debugLog({
+          location: 'app/api/talk/route.ts:conversation_turn',
+          message: 'conversation turn',
+          data: { userSnippet, responseSnippet, historyLen: context.messages.length },
+          hypothesisId: 'conversation_log',
+        });
 
         // Only include missionProgressNote in meta if it was set
         const metaPayload = textResult.missionProgressNote
           ? textResult
           : { ...textResult, missionProgressNote: undefined };
         send({ type: 'meta', ...metaPayload });
+        console.info('[Shelly] route: meta sent');
+        logAgent.logEvent('api_talk', 'meta_sent');
 
         // Phase 2: TTS — only synthesize when there is actual response text
         if (textResult.responseText.trim()) {
-          const audioBuffer = await tts.synthesize(textResult.responseText);
+          console.info('[Shelly] route: TTS start');
+          let audioBuffer: ArrayBuffer;
+          try {
+            audioBuffer = await tts.synthesize(textResult.responseText);
+          } catch (ttsErr) {
+            // Provider "unusual activity" (e.g. ElevenLabs 401): prefer Gemini TTS when available (works from server)
+            if (isProviderUnusualActivityError(ttsErr) && process.env.GEMINI_API_KEY) {
+              console.info('[Shelly] route: TTS fallback to Gemini (provider unusual activity)');
+              const fallbackTts = new GeminiTTSProvider();
+              audioBuffer = await fallbackTts.synthesize(textResult.responseText);
+            } else if (speechConfig.tts.provider === 'elevenlabs' && process.env.GEMINI_API_KEY) {
+              console.info('[Shelly] route: TTS fallback to Gemini (ElevenLabs unusual activity)');
+              const fallbackTts = new GeminiTTSProvider();
+              audioBuffer = await fallbackTts.synthesize(textResult.responseText);
+            } else if (speechConfig.tts.provider === 'gemini' && process.env.ELEVENLABS_API_KEY) {
+              console.info('[Shelly] route: TTS fallback to ElevenLabs');
+              try {
+                const fallbackTts = new ElevenLabsTTSProvider();
+                audioBuffer = await fallbackTts.synthesize(textResult.responseText);
+              } catch (elevenErr) {
+                if (isProviderUnusualActivityError(elevenErr) && process.env.GEMINI_API_KEY) {
+                  console.info('[Shelly] route: TTS fallback to Gemini (ElevenLabs returned unusual activity)');
+                  const geminiTts = new GeminiTTSProvider();
+                  audioBuffer = await geminiTts.synthesize(textResult.responseText);
+                } else {
+                  throw new SpeechServiceError('Text-to-speech failed', 'tts', elevenErr);
+                }
+              }
+            } else {
+              throw new SpeechServiceError('Text-to-speech failed', 'tts', ttsErr);
+            }
+          }
           const base64 = Buffer.from(audioBuffer).toString('base64');
           send({ type: 'audio', base64 });
+          console.info('[Shelly] route: audio sent');
+          logAgent.logEvent('api_talk', 'audio_sent', { byteLength: audioBuffer.byteLength });
+        } else {
+          console.info('[Shelly] route: no audio (empty response)');
         }
       } catch (err) {
+        logAgent.logEvent('api_talk', 'error', {
+          stage: err instanceof SpeechServiceError ? err.stage : 'unexpected',
+          message: err instanceof Error ? err.message : String(err),
+        }, 'error');
+        console.info('[Shelly] route: error', err instanceof SpeechServiceError ? err.stage : 'unexpected');
         const stageModels: Record<string, string> = {
           stt:  `${speechConfig.stt.provider}/${speechConfig.stt.provider === 'gemini' ? speechConfig.stt.geminiModel : speechConfig.stt.model}`,
           chat: `${speechConfig.chat.provider}/${speechConfig.chat.provider === 'gemini' ? speechConfig.chat.geminiModel : speechConfig.chat.provider === 'openai' ? speechConfig.chat.openaiModel : speechConfig.chat.anthropicModel}`,
@@ -113,6 +205,7 @@ export async function POST(req: NextRequest) {
           if (err instanceof Error) error = err.message;
         }
         send({ type: 'error', error });
+        console.info('[Shelly] route: error sent to client');
       } finally {
         controller.close();
       }

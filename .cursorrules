@@ -45,7 +45,7 @@ app/
       MicPermission.tsx           ← Full-screen permission request card
   hooks/
     useMicPermission.ts           ← checking | prompt | granted | denied
-    useSpeechConversation.ts      ← VAD state machine + API calls + audio playback
+    useVoiceSession.ts            ← Thin hook over VoiceConversationProvider (state, mood, messages, controls)
     useMissions.ts                ← localStorage-backed mission CRUD
 
 lib/speech/
@@ -206,19 +206,17 @@ Fallback response: `"Oh my! Let's talk about something else. What's your favouri
 - Future agents/tools (e.g. emotion analysis, parental controls, mission generation agent) would extend this layer
 - Add tools by wrapping `ChatAnthropic`/`ChatOpenAI` with `createReactAgent` from `langchain/agents`
 
-## VAD State Machine (`useSpeechConversation`)
-```
-idle → startListening() → listening → (voice detected) → recording → (silence) → processing → speaking → listening
-                                                                                   ↓ onMission?.(mission)
-```
-- `onEnd` callback → navigates to `/missions`
-- `onMission` callback → saves mission via `useMissions.addMission`
+## Voice state (useVoiceSession + VoiceConversationProvider)
+- Talk page uses `createVoiceProvider()` (native or Vapi) and `useVoiceSession(provider, options)`.
+- **Native provider** ([lib/speech/voice/native.ts](lib/speech/voice/native.ts)): VAD → record → POST /api/talk → NDJSON (meta + audio) → play → back to listening.
+- State flow: `idle` → `listening` → (voice) → `recording` → (silence) → `processing` → `speaking` → `listening`. `onEnd` → navigate to `/missions`; `onMissionChoices` → mission picker UI.
+- See [DEBUG.md](DEBUG.md) for voice debug and audio checklist.
 
 ## Missions Flow
-1. Shelly's chat response optionally includes a `mission` object
-2. API route passes it through to the client
-3. `useSpeechConversation` fires `onMission` when present
-4. `useMissions` hook stores missions in `localStorage` under key `turtle-talk-missions`
+1. Shelly's chat response includes `missionChoices` (3 missions) when ending the conversation
+2. API route passes them in stream meta; client emits `missionChoices` from provider
+3. Talk page shows MissionSelectView; user picks one; `useMissions.addMission` stores it
+4. Missions stored in `localStorage` under key `turtle-talk-missions`
 5. `/missions` page shows Active / Completed tabs; "✓ Done!" marks complete
 
 ## Styling Conventions

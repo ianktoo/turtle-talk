@@ -22,6 +22,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import type { ChatProvider, ChatResponse, ConversationContext, MissionSuggestion, MissionTheme, TurtleMood } from '../types';
 import { speechConfig } from '../config';
+import { debugLog } from '../debug-log';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -123,7 +124,15 @@ const AGENT_TOOLS = [
 
 const BASE_SYSTEM_PROMPT = `You are Shelly, a friendly sea turtle who chats with children aged 4-10.
 
+CRITICAL — respond to the child's actual words:
+- The child's most recent message is the LAST message in the conversation. Your reply must directly address what they JUST said in that message.
+- Do not invent, assume, or paraphrase what the child said. Use only the exact conversation history and the child's latest message.
+- If the child says "I have a dog", respond about their dog. If they say "tell me a story", respond with a short story or offer. Match your reply to their words.
+
 SPEAKING RULES — these are the most important:
+- Always speak and respond in English only.
+- Always reply with at least one short spoken sentence. Never reply with only tool calls or silence.
+- You must always include at least one short spoken sentence in your reply; never respond with only tool calls and no text.
 - Keep every response to 1 sentence + 1 question. No more.
 - End EVERY turn with a single simple question that invites the child to speak.
 - Never explain or lecture. React briefly, then ask.
@@ -189,16 +198,52 @@ function parseMissionChoices(raw: unknown): MissionSuggestion[] | undefined {
   return validated as MissionSuggestion[];
 }
 
+/** Extract text from a single content block (LangChain can use .text, .content, or type+'text'). */
+function textFromBlock(part: unknown): string {
+  if (typeof part === 'string') return part.trim();
+  if (!part || typeof part !== 'object') return '';
+  const p = part as Record<string, unknown>;
+  if (typeof p.text === 'string') return p.text.trim();
+  if (typeof p.content === 'string') return p.content.trim();
+  // Some integrations use type: 'text' with content or text
+  if (p.type === 'text') {
+    if (typeof p.text === 'string') return p.text.trim();
+    if (typeof p.content === 'string') return p.content.trim();
+  }
+  return '';
+}
+
 function extractTextContent(content: unknown): string {
   if (typeof content === 'string') return content.trim();
   if (Array.isArray(content)) {
-    return content
-      .filter((c): c is { type: string; text: string } => c?.type === 'text' && typeof c.text === 'string')
-      .map((c) => c.text)
-      .join(' ')
-      .trim();
+    const parts: string[] = [];
+    for (const c of content) {
+      const t = textFromBlock(c);
+      if (t) parts.push(t);
+    }
+    return parts.join(' ').trim();
   }
   return '';
+}
+
+/** Try to get text from Gemini-style response (e.g. additional_kwargs.candidates). */
+function extractTextFromGeminiFallback(response: { content?: unknown; additional_kwargs?: Record<string, unknown> }): string {
+  const kw = response.additional_kwargs;
+  if (!kw || typeof kw !== 'object') return '';
+
+  const candidates = kw.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
+  if (!Array.isArray(candidates) || candidates.length === 0) return '';
+
+  const parts: string[] = [];
+  for (const cand of candidates) {
+    const content = cand?.content;
+    const partList = content?.parts;
+    if (!Array.isArray(partList)) continue;
+    for (const p of partList) {
+      if (p && typeof p.text === 'string') parts.push(p.text.trim());
+    }
+  }
+  return parts.join(' ').trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -215,23 +260,43 @@ abstract class BaseChatProvider implements ChatProvider {
   async chat(input: string, ctx: ConversationContext): Promise<ChatResponse> {
     const systemContent = buildSystemPrompt(ctx);
 
+    // Current turn: the child's words from STT. This MUST be the last message so the model responds to it.
+    const currentTurnFromChild = typeof input === 'string' ? input.trim() : '';
     const messages = [
       new SystemMessage(systemContent),
       ...ctx.messages.map((m) =>
         m.role === 'user' ? new HumanMessage(m.content) : new AIMessage(m.content),
       ),
-      new HumanMessage(input),
+      new HumanMessage(currentTurnFromChild || input),
     ];
+
+    // #region agent log — user input (conversation history + current turn)
+    debugLog({
+      location: 'lib/speech/providers/chat.ts:user_input',
+      message: 'user input to LLM',
+      data: {
+        userMessageSnippet: currentTurnFromChild.slice(0, 120),
+        userMessageLen: currentTurnFromChild.length,
+        historyMessages: ctx.messages.length,
+      },
+      hypothesisId: 'conversation_log',
+    });
+    // #endregion
 
     // bindTools exists on ChatAnthropic/ChatOpenAI but not typed on the base class
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const modelWithTools = (this.model as any).bindTools(AGENT_TOOLS);
     const response = await modelWithTools.invoke(messages);
 
-    // --- Extract spoken text ---
-    const text = extractTextContent(response.content);
+    // --- Extract spoken text (Gemini often returns only tool_calls with empty content; use fallbacks) ---
+    let text = extractTextContent(response.content);
+    if (!text.trim() && this instanceof GeminiChatProvider) {
+      const fallback = extractTextFromGeminiFallback(response as { content?: unknown; additional_kwargs?: Record<string, unknown> });
+      if (fallback.trim()) text = fallback;
+    }
+    const llmExtractedText = text;
 
-    // --- Parse tool calls ---
+    // --- Parse tool calls (needed before we may synthesize reply) ---
     let mood: TurtleMood = 'talking';
     let missionChoices: MissionSuggestion[] | undefined;
     let endConversation = false;
@@ -269,6 +334,30 @@ abstract class BaseChatProvider implements ChatProvider {
         }
       }
     }
+
+    // When the LLM returns only tool_calls and no text (e.g. Gemini with tools), use one generic fallback
+    // so we never loop "I'm listening! Tell me more." — one neutral phrase for all empty responses.
+    const isFallback = !text.trim();
+    if (isFallback) {
+      // #region agent log
+      debugLog({ location: 'lib/speech/providers/chat.ts:empty_text_synthesize', message: 'chat returned empty text, using generic fallback', data: { mood, hasToolCalls: (response.tool_calls?.length ?? 0) > 0 }, hypothesisId: 'chat_empty' });
+      // #endregion
+      text = "I didn't quite catch that. Can you say it again?";
+    }
+
+    // #region agent log — LLM output (and user input was already logged before invoke)
+    debugLog({
+      location: 'lib/speech/providers/chat.ts:llm_output',
+      message: 'LLM output',
+      data: {
+        responseSnippet: text.slice(0, 120),
+        responseLen: text.length,
+        isFallback,
+        hadExtractedText: llmExtractedText.trim().length > 0,
+      },
+      hypothesisId: 'conversation_log',
+    });
+    // #endregion
 
     return { text, mood, missionChoices, endConversation, childName, topic, missionProgressNote };
   }

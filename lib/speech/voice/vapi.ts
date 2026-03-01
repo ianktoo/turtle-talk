@@ -26,14 +26,17 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
   private _generation = 0;
 
   async start(options: VoiceSessionOptions): Promise<void> {
+    console.info('[Shelly] vapi start');
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
     if (!publicKey) {
+      console.info('[Shelly] vapi: missing env (key)');
       this.emit('error', 'NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set');
       return;
     }
 
     const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
     if (!assistantId) {
+      console.info('[Shelly] vapi: missing env (assistant)');
       this.emit('error', 'NEXT_PUBLIC_VAPI_ASSISTANT_ID is not set');
       return;
     }
@@ -44,6 +47,10 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
     // Dynamic import keeps @vapi-ai/web out of the server bundle
     const gen = ++this._generation;
+    // Show listening immediately so we don't stay stuck on "Getting ready..." while connecting
+    this.emit('stateChange', 'listening');
+    this.emit('moodChange', 'listening');
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const vapiModule = await import('@vapi-ai/web') as any;
@@ -61,41 +68,46 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
         process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
         (typeof window !== 'undefined' ? window.location.origin : '');
 
-      await this.vapi.start({
-        assistantId,
-        assistantOverrides: {
-          model: {
-            provider: 'custom-llm',
-            model: 'shelly',
-            url: `${llmBase}/api/vapi/llm`,
-            metadataSendMode: 'variable',
-          },
-          voice: {
-            provider: '11labs',
-            voiceId: process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL',
-            model: 'eleven_turbo_v2_5',
-            stability: 0.75,
-            similarityBoost: 0.75,
-            speed: 0.9,
-          },
-          variableValues: {
-            childName: options.childName ?? 'friend',
-          },
+      await this.vapi.start(assistantId, {
+        model: {
+          provider: 'custom-llm',
+          model: 'shelly',
+          url: `${llmBase}/api/vapi/llm`,
+          metadataSendMode: 'off',
+          // Inject per-call context as a system message so /api/vapi/llm can read it
+          messages: [{
+            role: 'system',
+            content: JSON.stringify({
+              childName: options.childName ?? null,
+              topics: options.topics ?? [],
+              difficultyProfile: options.difficultyProfile ?? 'beginner',
+              activeMission: options.activeMission ?? null,
+            }),
+          }],
         },
-        // top-level metadata — Vapi forwards this to /api/vapi/llm as body.metadata
-        metadata: {
-          childName: options.childName ?? null,
-          topics: options.topics ?? [],
-          difficultyProfile: options.difficultyProfile ?? 'beginner',
-          activeMission: options.activeMission ?? null,
+        voice: {
+          provider: '11labs',
+          voiceId: process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL',
+          model: 'eleven_turbo_v2_5',
+          stability: 0.75,
+          similarityBoost: 0.75,
+          speed: 0.9,
+        },
+        variableValues: {
+          childName: options.childName ?? 'friend',
         },
       });
+      console.info('[Shelly] vapi: call started');
     } catch (err) {
+      console.info('[Shelly] vapi: start error');
       this.emit('error', (err as Error)?.message ?? 'Failed to start Vapi');
+      this.emit('stateChange', 'idle');
+      this.emit('moodChange', 'idle');
     }
   }
 
   stop(): void {
+    console.info('[Shelly] vapi stop');
     this._generation++; // invalidate all handlers from the current session
     this.vapi?.stop();
     this.vapi = null;
@@ -125,12 +137,14 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
     v.on('call-start', () => {
       if (!alive()) return;
+      console.info('[Shelly] vapi: call-start');
       this.emit('stateChange', 'listening');
       this.emit('moodChange', 'listening');
     });
 
     v.on('call-end', () => {
       if (!alive()) return;
+      console.info('[Shelly] vapi: call-end');
       this.emit('stateChange', 'ended');
       this.emit('moodChange', 'idle');
       this.emit('end');
@@ -139,6 +153,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
     // User began speaking
     v.on('speech-start', () => {
       if (!alive()) return;
+      console.info('[Shelly] vapi: speech-start');
       this.emit('stateChange', 'recording');
       this.emit('moodChange', 'listening');
     });
@@ -146,6 +161,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
     // User finished speaking — Vapi will now call our LLM
     v.on('speech-end', () => {
       if (!alive()) return;
+      console.info('[Shelly] vapi: speech-end (processing)');
       this.emit('stateChange', 'processing');
       this.emit('moodChange', 'confused');
     });
@@ -156,6 +172,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
       // Final transcript lines → build our messages array
       if (message.type === 'transcript' && message.transcriptType === 'final') {
         const role = message.role as 'user' | 'assistant';
+        console.info('[Shelly] vapi: transcript final', role);
         const content = message.transcript as string;
         const updated: Message[] = [...this.messages, { role, content }];
         this.messages = updated;
@@ -173,6 +190,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
         const { name, parameters } = (message.functionCall ?? {}) as {
           name?: string; parameters?: Record<string, unknown>;
         };
+        console.info('[Shelly] vapi: function-call', name);
 
         if (name === 'reportMood' && parameters?.mood) {
           this.emit('moodChange', parameters.mood as TurtleMood);
@@ -188,6 +206,7 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
 
       // Assistant finished speaking → resume listening
       if (message.type === 'status-update' && message.status === 'ended') {
+        console.info('[Shelly] vapi: status ended, listening');
         this.emit('stateChange', 'listening');
         this.emit('moodChange', 'listening');
       }
@@ -196,7 +215,11 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     v.on('error', (e: any) => {
       if (!alive()) return;
-      this.emit('error', (e as Error)?.message ?? 'Vapi error');
+      console.info('[Shelly] vapi: error event');
+      const msg = (e as Error)?.message
+        ?? (typeof e === 'object' ? JSON.stringify(e) : String(e))
+        ?? 'Vapi error';
+      this.emit('error', msg);
     });
   }
 }

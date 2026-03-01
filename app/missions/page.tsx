@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Zap, CheckCircle2, Check, MessageCircle } from 'lucide-react';
 import { useMissions } from '@/app/hooks/useMissions';
+import { useChildSession } from '@/app/hooks/useChildSession';
 import type { Mission, MissionTheme } from '@/lib/speech/types';
 
 const THEME_EMOJI: Record<MissionTheme, string> = {
@@ -165,7 +166,8 @@ function EmptyState({ tab }: { tab: 'active' | 'completed' }) {
 
 export default function MissionsPage() {
   const router = useRouter();
-  const { activeMissions, completedMissions, completeMission, deleteMission } = useMissions();
+  const { child } = useChildSession();
+  const { activeMissions, completedMissions, completeMission, deleteMission } = useMissions(child?.childId);
   const [tab, setTab] = useState<'active' | 'completed'>('active');
 
   const displayed = tab === 'active' ? activeMissions : completedMissions;

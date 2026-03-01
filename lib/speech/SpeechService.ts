@@ -1,6 +1,7 @@
 import type { SpeechServiceConfig, ConversationContext, ProcessResult, TextProcessResult, TurtleMood, ChatResponse } from './types';
 import type { GuardrailAgent } from './guardrails/types';
 import { SpeechServiceError, GuardrailBlockedError } from './errors';
+import { debugLog } from './debug-log';
 
 const FALLBACK_RESPONSE = "Oh my! Let's talk about something else. What's your favourite animal?";
 const FALLBACK_MOOD: TurtleMood = 'confused';
@@ -67,19 +68,39 @@ export class SpeechService {
     return current;
   }
 
-  /** Steps 1–4: STT → input guardrails → chat → output guardrails. No TTS. */
-  async processToText(audio: Blob, context: ConversationContext): Promise<TextProcessResult> {
-    // 1. STT
+  /** Options for processToText: when preTranscribedText is set, skip STT (caller already sent user_text to client). */
+  async processToText(
+    audio: Blob,
+    context: ConversationContext,
+    options?: { preTranscribedText?: string },
+  ): Promise<TextProcessResult> {
+    // 1. STT (or use pre-transcribed text when route already sent user_text event)
     let userText: string;
-    try {
-      userText = await this.stt.transcribe(audio);
-    } catch (err) {
-      throw new SpeechServiceError('Speech-to-text failed', 'stt', err);
+    if (options?.preTranscribedText !== undefined && options.preTranscribedText !== null) {
+      userText = options.preTranscribedText;
+    } else {
+      try {
+        userText = await this.stt.transcribe(audio);
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV) {
+          console.info('[Shelly] service: STT done');
+        }
+        // #region agent log
+        debugLog({ location: 'lib/speech/SpeechService.ts:after_stt', message: 'STT result', data: { userTextLen: (userText || '').length, userTextSnippet: (userText || '').slice(0, 80), isEmpty: !(userText || '').trim() }, hypothesisId: 'H1' });
+        // #endregion
+      } catch (err) {
+        // #region agent log
+        debugLog({ location: 'lib/speech/SpeechService.ts:stt_throw', message: 'STT threw', data: { message: err instanceof Error ? err.message : String(err) }, hypothesisId: 'H2' });
+        // #endregion
+        throw new SpeechServiceError('Speech-to-text failed', 'stt', err);
+      }
     }
 
     // Guard: empty transcription means the audio was silent or noise-only.
     // Return a sentinel result so the route can discard the turn cleanly.
     if (!userText.trim()) {
+      // #region agent log
+      debugLog({ location: 'lib/speech/SpeechService.ts:empty_sentinel', message: 'returning empty sentinel', hypothesisId: 'H1' });
+      // #endregion
       return { userText, responseText: '', mood: 'idle' };
     }
 
@@ -97,6 +118,9 @@ export class SpeechService {
     let chatResponse: ChatResponse;
     try {
       chatResponse = await this.chat.chat(userText, context);
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV) {
+        console.info('[Shelly] service: chat done');
+      }
     } catch (err) {
       throw new SpeechServiceError('Chat provider failed', 'chat', err);
     }

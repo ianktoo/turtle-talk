@@ -24,20 +24,26 @@ type ToolCall = {
 };
 
 export async function POST(req: NextRequest) {
-  let body: { messages?: OAIMessage[]; metadata?: Record<string, unknown> };
+  let body: { messages?: OAIMessage[] };
   try {
     body = await req.json();
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
+  console.info('[Shelly] vapi/llm: request received');
+
+  // Extract per-call context from the injected system message (set via model.messages in VapiVoiceProvider)
+  const systemMsg = (body.messages ?? []).find((m) => m.role === 'system');
+  let meta: Record<string, unknown> = {};
+  if (systemMsg) {
+    try { meta = JSON.parse(systemMsg.content); } catch { /* ignore malformed */ }
+  }
+
+  // Strip system messages — only conversation turns go into history
   const rawMessages = (body.messages ?? []).filter((m) => m.role !== 'system');
-  const meta = body.metadata ?? {};
 
-  console.log('[vapi/llm] raw messages received:', JSON.stringify(body.messages ?? [], null, 2));
-  console.log('[vapi/llm] metadata:', JSON.stringify(meta));
-
-  // Extract context from Vapi metadata (passed via model.metadata in VapiVoiceProvider)
+  // Extract context fields
   const childName        = typeof meta.childName === 'string' ? meta.childName : undefined;
   const topics           = Array.isArray(meta.topics) ? (meta.topics as string[]) : [];
   const activeMission    = (meta.activeMission ?? null) as ConversationContext['activeMission'];
@@ -49,6 +55,7 @@ export async function POST(req: NextRequest) {
   // Last user message is the one we respond to
   const lastUser = [...rawMessages].reverse().find((m) => m.role === 'user');
   if (!lastUser) {
+    console.info('[Shelly] vapi/llm: no user message, greeting');
     return openAIResponse("Hi there! I'm Shelly. What would you like to talk about? 🐢", [
       toolCall('reportMood', { mood: 'happy' }),
     ]);
@@ -68,29 +75,21 @@ export async function POST(req: NextRequest) {
     activeMission,
   };
 
-  console.log('[vapi/llm] lastUser:', lastUser.content);
-  console.log('[vapi/llm] history length:', history.length, JSON.stringify(history));
-
   // --- Guardrail + LLM ---
+  console.info('[Shelly] vapi/llm: guardrail input');
   const guardrail = new ChildSafeGuardrail();
   const inputCheck = await guardrail.checkInput(lastUser.content);
 
   if (!inputCheck.safe) {
+    console.info('[Shelly] vapi/llm: guardrail blocked input');
     return openAIResponse(FALLBACK_TEXT, [toolCall('reportMood', { mood: 'confused' })]);
   }
 
   try {
+    console.info('[Shelly] vapi/llm: chat start');
     const chat = createChatProvider(speechConfig.chat.provider);
     const response = await chat.chat(lastUser.content, context);
-
-    console.log('[vapi/llm] LLM response:', JSON.stringify({
-      text: response.text,
-      mood: response.mood,
-      endConversation: response.endConversation,
-      missionChoices: response.missionChoices?.length,
-      childName: response.childName,
-      topic: response.topic,
-    }));
+    console.info('[Shelly] vapi/llm: chat done');
 
     const outputCheck = await guardrail.checkOutput(response.text);
     const text = outputCheck.sanitized ?? response.text;
@@ -109,10 +108,10 @@ export async function POST(req: NextRequest) {
       tools.push(toolCall('reportEndConversation', {}));
     }
 
-    console.log('[vapi/llm] returning tools:', tools.map(t => t.function.name));
+    console.info('[Shelly] vapi/llm: returning tools', tools.map(t => t.function.name));
     return openAIResponse(text, tools);
   } catch (err) {
-    console.error('[/api/vapi/llm] LLM error:', err);
+    console.info('[Shelly] vapi/llm: LLM error (returning fallback)');
     return openAIResponse(
       "Oops! My brain got a little confused. Can you say that again?",
       [toolCall('reportMood', { mood: 'confused' })],

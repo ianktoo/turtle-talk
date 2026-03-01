@@ -31,7 +31,20 @@ export class SupabaseDatabaseService implements DatabaseService {
       .select('*')
       .eq('child_id', childId)
       .order('created_at', { ascending: false });
-    if (error) throw error;
+    if (error) {
+      // 42P01 = relation "missions" does not exist (migrations not run). PostgREST also returns 404.
+      const isTableMissing =
+        error.code === '42P01' ||
+        (error as { message?: string }).message?.includes('does not exist') ||
+        (error as { message?: string }).message?.includes('404');
+      if (isTableMissing) {
+        console.warn(
+          '[Supabase] missions table not found. Run supabase/migrations/001_initial.sql in the Supabase SQL Editor.',
+        );
+        return [];
+      }
+      throw error;
+    }
     return (data ?? []).map(rowToMission);
   }
 

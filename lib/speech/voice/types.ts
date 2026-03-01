@@ -24,6 +24,8 @@ export interface VoiceEventMap {
   stateChange:    VoiceSessionState;
   moodChange:     TurtleMood;
   messages:       Message[];
+  /** Emitted as soon as STT returns, before LLM reply — so UI can show "You said: ..." */
+  userTranscript: string;
   missionChoices: MissionSuggestion[];
   childName:      string;
   topic:          string;

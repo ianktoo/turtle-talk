@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Varela_Round } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
+import { Analytics } from "@vercel/analytics/next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
 import Scene from "./components/Scene";
@@ -87,6 +88,7 @@ export default function RootLayout({
           <Scene />
           {children}
           <VersionBadge />
+          <Analytics />
         </Theme>
       </body>
     </html>

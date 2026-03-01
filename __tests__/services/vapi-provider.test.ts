@@ -1,6 +1,6 @@
 /**
  * Tests that VapiVoiceProvider.start() calls vapi.start() with
- * assistantId + assistantOverrides (not inline assistant config).
+ * the positional API: vapi.start(assistantId, overrides)
  */
 
 // Mock the @vapi-ai/web dynamic import
@@ -32,22 +32,22 @@ afterEach(() => {
   delete process.env.NEXT_PUBLIC_CUSTOM_LLM_URL;
 });
 
-test('start() calls vapi.start with assistantId', async () => {
+test('start() calls vapi.start with assistantId as first argument', async () => {
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Leo', topics: ['space'], difficultyProfile: 'beginner', activeMission: null });
 
   expect(mockStart).toHaveBeenCalledTimes(1);
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantId).toBe(ASSISTANT_ID);
+  const [assistantId] = mockStart.mock.calls[0];
+  expect(assistantId).toBe(ASSISTANT_ID);
 });
 
-test('start() passes model override with custom-llm URL', async () => {
+test('start() passes model override with custom-llm URL as second argument', async () => {
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: null });
 
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantOverrides.model.provider).toBe('custom-llm');
-  expect(arg.assistantOverrides.model.url).toBe('https://test.ngrok.io/api/vapi/llm');
+  const [, overrides] = mockStart.mock.calls[0];
+  expect(overrides.model.provider).toBe('custom-llm');
+  expect(overrides.model.url).toBe('https://test.ngrok.io/api/vapi/llm');
 });
 
 test('start() falls back to window.location.origin when CUSTOM_LLM_URL is unset', async () => {
@@ -56,26 +56,29 @@ test('start() falls back to window.location.origin when CUSTOM_LLM_URL is unset'
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: null });
 
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantOverrides.model.url).toContain('/api/vapi/llm');
+  const [, overrides] = mockStart.mock.calls[0];
+  expect(overrides.model.url).toContain('/api/vapi/llm');
 });
 
 test('start() passes childName in variableValues', async () => {
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Mia', topics: [], difficultyProfile: 'beginner', activeMission: null });
 
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantOverrides.variableValues.childName).toBe('Mia');
+  const [, overrides] = mockStart.mock.calls[0];
+  expect(overrides.variableValues.childName).toBe('Mia');
 });
 
-test('start() passes context in metadata', async () => {
+test('start() passes context as system message in model.messages', async () => {
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Mia', topics: ['animals'], difficultyProfile: 'intermediate', activeMission: null });
 
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.metadata.childName).toBe('Mia');
-  expect(arg.metadata.topics).toEqual(['animals']);
-  expect(arg.metadata.difficultyProfile).toBe('intermediate');
+  const [, overrides] = mockStart.mock.calls[0];
+  const systemMsg = overrides.model.messages?.[0];
+  expect(systemMsg?.role).toBe('system');
+  const ctx = JSON.parse(systemMsg?.content ?? '{}');
+  expect(ctx.childName).toBe('Mia');
+  expect(ctx.topics).toEqual(['animals']);
+  expect(ctx.difficultyProfile).toBe('intermediate');
 });
 
 test('start() emits error when NEXT_PUBLIC_VAPI_PUBLIC_KEY is missing', async () => {
@@ -108,34 +111,35 @@ test('start() emits error when vapi.start() rejects', async () => {
   expect(errors[0]).toMatch(/Vapi connection refused/);
 });
 
-test('start() passes activeMission in metadata', async () => {
+test('start() passes activeMission in system message context', async () => {
   const mission = { id: 'm1', title: 'Read a book', description: 'Read for 10 minutes', theme: 'curious' as const, difficulty: 'easy' as const, status: 'active' as const, createdAt: '2026-01-01' };
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: mission });
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.metadata.activeMission).toEqual(mission);
+  const [, overrides] = mockStart.mock.calls[0];
+  const ctx = JSON.parse(overrides.model.messages?.[0]?.content ?? '{}');
+  expect(ctx.activeMission).toEqual(mission);
 });
 
 test('start() uses "friend" as fallback childName in variableValues', async () => {
   const provider = new VapiVoiceProvider();
   await provider.start({});
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantOverrides.variableValues.childName).toBe('friend');
+  const [, overrides] = mockStart.mock.calls[0];
+  expect(overrides.variableValues.childName).toBe('friend');
 });
 
-test('start() passes ElevenLabs voice override in assistantOverrides', async () => {
+test('start() passes ElevenLabs voice override in overrides', async () => {
   process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID = 'test-voice-id';
   const provider = new VapiVoiceProvider();
   await provider.start({ childName: 'Leo', topics: [], difficultyProfile: 'beginner', activeMission: null });
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantOverrides.voice.provider).toBe('11labs');
-  expect(arg.assistantOverrides.voice.voiceId).toBe('test-voice-id');
+  const [, overrides] = mockStart.mock.calls[0];
+  expect(overrides.voice.provider).toBe('11labs');
+  expect(overrides.voice.voiceId).toBe('test-voice-id');
   delete process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID;
 });
 
 test('start() uses default ElevenLabs voice ID when env var is unset', async () => {
   const provider = new VapiVoiceProvider();
   await provider.start({});
-  const arg = mockStart.mock.calls[0][0];
-  expect(arg.assistantOverrides.voice.voiceId).toBe('EXAVITQu4vr4xnSDxMaL');
+  const [, overrides] = mockStart.mock.calls[0];
+  expect(overrides.voice.voiceId).toBe('EXAVITQu4vr4xnSDxMaL');
 });

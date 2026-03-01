@@ -20,6 +20,7 @@ create table if not exists missions (
 
 alter table missions enable row level security;
 
+drop policy if exists "missions_all" on missions;
 create policy "missions_all" on missions
   for all using (true) with check (true);
 
@@ -36,6 +37,7 @@ create table if not exists child_memory (
 
 alter table child_memory enable row level security;
 
+drop policy if exists "child_memory_all" on child_memory;
 create policy "child_memory_all" on child_memory
   for all using (true) with check (true);
 

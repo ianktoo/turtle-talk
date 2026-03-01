@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useMissions } from '@/app/hooks/useMissions';
+import { useChildSession } from '@/app/hooks/useChildSession';
 import type { Mission } from '@/lib/speech/types';
 
 const DIFFICULTY_ICON: Record<string, string> = {
@@ -28,7 +29,8 @@ function missionIcon(m: Mission): string {
 }
 
 export default function WorldPage() {
-  const { completedMissions } = useMissions();
+  const { child } = useChildSession();
+  const { completedMissions } = useMissions(child?.childId);
   const [revealed, setRevealed] = useState<string | null>(null);
 
   return (

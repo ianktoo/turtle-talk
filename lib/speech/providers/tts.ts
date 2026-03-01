@@ -75,11 +75,18 @@ export class GeminiTTSProvider implements TTSProvider {
   }
 
   async synthesize(text: string): Promise<ArrayBuffer> {
-    const model = this.genAI.getGenerativeModel({ model: speechConfig.tts.geminiModel });
+    const modelId = speechConfig.tts.geminiModel;
+    // #region agent log
+    fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '71e1f5' }, body: JSON.stringify({ sessionId: '71e1f5', location: 'lib/speech/providers/tts.ts:synthesize', message: 'Gemini TTS model id', data: { modelId }, timestamp: Date.now(), hypothesisId: 'H1' }) }).catch(() => {});
+    // #endregion
+    const model = this.genAI.getGenerativeModel({ model: modelId });
+
+    // TTS model must receive a clear directive to output only audio (no text generation).
+    const ttsPrompt = `Say the following aloud. Output only speech, no text: ${text}`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (model as any).generateContent({
-      contents: [{ role: 'user', parts: [{ text }] }],
+      contents: [{ role: 'user', parts: [{ text: ttsPrompt }] }],
       generationConfig: {
         responseModalities: ['AUDIO'],
         speechConfig: {

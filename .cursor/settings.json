@@ -1,0 +1,10 @@
+{
+  "plugins": {
+    "vercel": {
+      "enabled": true
+    },
+    "continual-learning": {
+      "enabled": true
+    }
+  }
+}

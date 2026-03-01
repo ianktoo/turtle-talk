@@ -16,6 +16,8 @@ interface UseVoiceSessionResult {
   state: VoiceSessionState;
   mood: TurtleMood;
   messages: Message[];
+  /** Set as soon as STT returns (before meta); cleared when messages update. Show "You said: ..." for sync. */
+  pendingUserTranscript: string | null;
   isMuted: boolean;
   error: string | null;
   startListening: () => Promise<void>;
@@ -25,7 +27,7 @@ interface UseVoiceSessionResult {
 
 /**
  * Thin React hook over any VoiceConversationProvider.
- * Drop-in replacement for useSpeechConversation — same return shape.
+ * Subscribes to provider events and exposes state, mood, messages, and controls.
  */
 export function useVoiceSession(
   provider: VoiceConversationProvider,
@@ -34,6 +36,7 @@ export function useVoiceSession(
   const [state, setState] = useState<VoiceSessionState>('idle');
   const [mood, setMood] = useState<TurtleMood>('idle');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [pendingUserTranscript, setPendingUserTranscript] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,28 +50,35 @@ export function useVoiceSession(
     const onMood   = (m: TurtleMood) => setMood(m);
     const onMsgs   = (msgs: Message[]) => {
       setMessages(msgs);
+      setPendingUserTranscript(null);
       optsRef.current.onMessagesChange?.(msgs);
     };
+    const onUserTranscript = (text: string) => setPendingUserTranscript(text);
     const onChoices = (choices: MissionSuggestion[]) => optsRef.current.onMissionChoices?.(choices);
     const onName    = (name: string) => optsRef.current.onChildName?.(name);
     const onTopic   = (topic: string) => optsRef.current.onTopic?.(topic);
-    const onError   = (msg: string) => setError(msg);
+    const onError   = (msg: string) => {
+      console.info('[Shelly] error from provider:', msg ? 'received' : 'empty');
+      setError(msg);
+    };
     const onEnd     = () => optsRef.current.onEnd?.();
 
-    provider.on('stateChange',    onState);
-    provider.on('moodChange',     onMood);
-    provider.on('messages',       onMsgs);
-    provider.on('missionChoices', onChoices);
+    provider.on('stateChange',     onState);
+    provider.on('moodChange',      onMood);
+    provider.on('messages',        onMsgs);
+    provider.on('userTranscript',  onUserTranscript);
+    provider.on('missionChoices',  onChoices);
     provider.on('childName',      onName);
     provider.on('topic',          onTopic);
     provider.on('error',          onError);
     provider.on('end',            onEnd);
 
     return () => {
-      provider.off('stateChange',    onState);
-      provider.off('moodChange',     onMood);
-      provider.off('messages',       onMsgs);
-      provider.off('missionChoices', onChoices);
+      provider.off('stateChange',     onState);
+      provider.off('moodChange',      onMood);
+      provider.off('messages',        onMsgs);
+      provider.off('userTranscript',   onUserTranscript);
+      provider.off('missionChoices',  onChoices);
       provider.off('childName',      onName);
       provider.off('topic',          onTopic);
       provider.off('error',          onError);
@@ -79,6 +89,7 @@ export function useVoiceSession(
   }, [provider]);
 
   const startListening = useCallback(async () => {
+    console.info('[Shelly] startListening called');
     setError(null);
     const opts = optsRef.current;
     await provider.start({
@@ -101,5 +112,5 @@ export function useVoiceSession(
     provider.stop();
   }, [provider]);
 
-  return { state, mood, messages, isMuted, error, startListening, toggleMute, endConversation };
+  return { state, mood, messages, pendingUserTranscript, isMuted, error, startListening, toggleMute, endConversation };
 }

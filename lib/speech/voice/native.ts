@@ -3,12 +3,15 @@
 import type { Message, MissionSuggestion, TurtleMood } from '../types';
 import type { VoiceSessionOptions, VoiceSessionState } from './types';
 import { BaseVoiceProvider } from './base';
+import { debugLog } from '../debug-log';
 
 const VAD_THRESHOLD = 35;      // ambient noise sits at 8-20, real speech at 40+
 const VAD_START_MS = 150;      // silence must turn to sound for this long
 const VAD_STOP_MS = 600;       // sound must drop below threshold for this long
 const POLL_INTERVAL_MS = 100;
 const MIN_AUDIO_BYTES = 6000;  // ~400 ms of real speech
+/** Cap conversation history so context stays bounded and matches DB persistence (e.g. last 20). */
+const MAX_CONVERSATION_MESSAGES = 20;
 
 export class NativeVoiceProvider extends BaseVoiceProvider {
   readonly name = 'native';
@@ -31,15 +34,28 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
   // ---------------------------------------------------------------------------
 
   async start(options: VoiceSessionOptions): Promise<void> {
+    console.info('[Shelly] native start');
     this.options = options;
-    if (options.initialMessages?.length) {
-      this.messages = [...options.initialMessages];
+    // Always set messages from options so each session starts with the correct history (or empty).
+    this.messages = (options.initialMessages?.length ? [...options.initialMessages] : []).slice(-MAX_CONVERSATION_MESSAGES);
+
+    // Clear any orphaned VAD interval from a previous session (e.g. Strict Mode double-mount)
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
+    // Always enter listening when starting a new session, even if we were previously 'ended'
+    // (transitionToListening() returns early when state is 'ended', which left us stuck)
+    this.setState('listening');
+    this.emit('moodChange', 'listening');
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
+      console.info('[Shelly] native: microphone access failed');
       this.emit('error', 'Could not access microphone');
+      this.setState('idle');
+      this.emit('moodChange', 'idle');
       return;
     }
 
@@ -49,12 +65,12 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
     this.analyser.fftSize = 256;
     source.connect(this.analyser);
 
-    this.setState('listening');
-    this.emit('moodChange', 'listening');
+    this.transitionToListening();
     this.startVAD();
   }
 
   stop(): void {
+    console.info('[Shelly] native stop');
     this.cleanup();
     this.setState('ended');
     this.emit('moodChange', 'idle');
@@ -62,6 +78,7 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
   }
 
   setMuted(muted: boolean): void {
+    console.info('[Shelly] native mute:', muted);
     if (muted) {
       this.prevState = this.state;
       this.audioCtx?.suspend();
@@ -83,10 +100,14 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
     const dataArr = new Uint8Array(this.analyser!.frequencyBinCount);
     let aboveThresholdSince: number | null = null;
     let belowThresholdSince: number | null = null;
+    let vadTicks = 0;
 
     this.pollInterval = setInterval(() => {
+      vadTicks += 1;
       const s = this.state;
-      if (s === 'ended' || s === 'muted' || s === 'processing' || s === 'speaking') return;
+      if (s === 'ended' || s === 'muted' || s === 'processing' || s === 'speaking') {
+        return;
+      }
 
       this.analyser!.getByteFrequencyData(dataArr);
       const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
@@ -119,6 +140,7 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
 
   private startRecording(): void {
     if (!this.stream) return;
+    console.info('[Shelly] native: recording');
     this.chunks = [];
     this.recorder = new MediaRecorder(this.stream);
     this.recorder.start();
@@ -148,18 +170,25 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
 
   private async sendAudio(blob: Blob): Promise<void> {
     if (blob.size < MIN_AUDIO_BYTES) {
-      this.setState('listening');
-      this.emit('moodChange', 'listening');
+      console.info('[Shelly] native: blob too small, back to listening');
+      // #region agent log
+      debugLog({ location: 'lib/speech/voice/native.ts:blob_too_small', message: 'client dropped blob', data: { blobSize: blob.size, minRequired: MIN_AUDIO_BYTES }, hypothesisId: 'H3' });
+      // #endregion
+      this.transitionToListening();
       return;
     }
 
+    // #region agent log
+    debugLog({ location: 'lib/speech/voice/native.ts:send_audio', message: 'client sending audio', data: { blobSize: blob.size, blobType: blob.type }, hypothesisId: 'H3' });
+    // #endregion
+    console.info('[Shelly] native: processing (request to /api/talk)');
     this.setState('processing');
     this.emit('moodChange', 'confused');
 
     const opts = this.options;
     const formData = new FormData();
     formData.append('audio', blob, 'audio.webm');
-    formData.append('messages', JSON.stringify(this.messages));
+    formData.append('messages', JSON.stringify(this.messages.slice(-MAX_CONVERSATION_MESSAGES)));
     if (opts.childName) formData.append('childName', opts.childName);
     if (opts.topics?.length) formData.append('topics', JSON.stringify(opts.topics));
     if (opts.difficultyProfile) formData.append('difficultyProfile', opts.difficultyProfile);
@@ -168,10 +197,21 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
     try {
       const res = await fetch('/api/talk', { method: 'POST', body: formData });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+        let errMsg: string;
+        const contentType = res.headers.get('content-type') ?? '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json().catch(() => ({}));
+          errMsg = (data as { error?: string }).error ?? `HTTP ${res.status}`;
+        } else {
+          errMsg = `HTTP ${res.status}`;
+        }
+        console.info('[Shelly] native: API error response', res.status);
+        throw new Error(errMsg);
       }
-      if (!res.body) throw new Error('No response body');
+      if (!res.body) {
+        console.info('[Shelly] native: no response body');
+        throw new Error('No response body');
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -189,8 +229,12 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
           if (!line.trim()) continue;
           const event = JSON.parse(line) as Record<string, unknown>;
 
-          if (event.type === 'meta') {
+          if (event.type === 'user_text') {
+            const userText = typeof event.userText === 'string' ? event.userText : '';
+            if (userText.trim()) this.emit('userTranscript', userText);
+          } else if (event.type === 'meta') {
             receivedMeta = true;
+            console.info('[Shelly] native: meta received');
             const { userText, responseText, mood, missionChoices, endConversation, childName, topic } =
               event as {
                 userText: string; responseText: string; mood: TurtleMood;
@@ -207,30 +251,46 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
               ...this.messages,
               { role: 'user', content: userText },
               { role: 'assistant', content: responseText },
-            ];
+            ].slice(-MAX_CONVERSATION_MESSAGES);
             this.messages = updated;
             this.emit('messages', updated);
 
-            this.setState('speaking');
-            this.emit('moodChange', mood ?? 'talking');
+            // No TTS when response is empty — server won't send audio; transition back to listening in one place
+            if (responseText?.trim()) {
+              this.setState('speaking');
+              this.emit('moodChange', mood ?? 'talking');
+            } else {
+              console.info('[Shelly] native: meta had empty response, back to listening');
+              this.transitionToListening();
+            }
 
           } else if (event.type === 'audio') {
+            console.info('[Shelly] native: audio received');
             await this.playAudio(event.base64 as string);
           } else if (event.type === 'error') {
-            throw new Error(event.error as string);
+            console.info('[Shelly] native: stream error event');
+            const errPayload = event.error as string;
+            throw new Error(errPayload);
           }
         }
       }
 
-      // Stream closed without meta — discard silently, return to listening
+      // Single place for "stream ended" recovery: avoid duplicate emissions, keep state/mood in sync
       if (!receivedMeta && this.state === 'processing') {
-        this.setState('listening');
-        this.emit('moodChange', 'listening');
+        // #region agent log
+        debugLog({ location: 'lib/speech/voice/native.ts:no_meta', message: 'stream ended without meta', hypothesisId: 'H5' });
+        // #endregion
+        console.info('[Shelly] native: stream ended without meta, back to listening');
+        this.transitionToListening();
+      } else if (this.state === 'speaking') {
+        console.info('[Shelly] native: stream ended while speaking, back to listening');
+        this.transitionToListening();
       }
     } catch (err) {
-      this.emit('error', err instanceof Error ? err.message : 'Something went wrong');
-      this.setState('listening');
-      this.emit('moodChange', 'listening');
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      console.info('[Shelly] native: sendAudio error');
+      this.emit('error', msg);
+      this.transitionToListening();
     }
   }
 
@@ -240,30 +300,32 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
 
   private async playAudio(base64: string): Promise<void> {
     return new Promise((resolve) => {
+      console.info('[Shelly] native: playing audio');
       const audioData = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const buffer = audioData.buffer.slice(audioData.byteOffset, audioData.byteOffset + audioData.byteLength);
       const playCtx = new AudioContext();
-      playCtx.decodeAudioData(audioData.buffer).then((decoded) => {
+      playCtx.decodeAudioData(buffer).then((decoded) => {
         const source = playCtx.createBufferSource();
         source.buffer = decoded;
         source.connect(playCtx.destination);
         source.start();
         source.onended = () => {
           playCtx.close();
+          console.info('[Shelly] native: audio ended, back to listening');
           if (this.pendingEnd) {
             this.pendingEnd = false;
             this.stop();
-          } else if (this.state !== 'ended' && this.state !== 'muted') {
-            this.setState('listening');
-            this.emit('moodChange', 'listening');
+          } else {
+            this.transitionToListening();
           }
           resolve();
         };
       }).catch((err) => {
-        console.error('[NativeVoiceProvider] decodeAudioData failed:', err);
+        console.info('[Shelly] native: audio decode failed');
         playCtx.close();
         if (this.state !== 'ended' && this.state !== 'muted') {
-          this.setState('listening');
-          this.emit('moodChange', 'listening');
+          this.emit('error', `Audio playback failed: ${err instanceof Error ? err.message : 'invalid audio format'}`);
+          this.transitionToListening();
         }
         resolve();
       });
@@ -286,5 +348,12 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
   private setState(s: VoiceSessionState): void {
     this.state = s;
     this.emit('stateChange', s);
+  }
+
+  /** Single place to transition to listening so state + mood stay in sync (seamless event management). */
+  private transitionToListening(): void {
+    if (this.state === 'ended' || this.state === 'muted') return;
+    this.setState('listening');
+    this.emit('moodChange', 'listening');
   }
 }

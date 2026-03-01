@@ -7,7 +7,9 @@ import { useMicPermission } from '@/app/hooks/useMicPermission';
 import { useVoiceSession } from '@/app/hooks/useVoiceSession';
 import { useMissions } from '@/app/hooks/useMissions';
 import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
-import { VapiVoiceProvider } from '@/lib/speech/voice/vapi';
+import { useChildSession } from '@/app/hooks/useChildSession';
+import { createVoiceProvider } from '@/lib/speech/voice';
+import { getUserFacingMessage } from '@/lib/speech/errors';
 import TurtleCharacter from '@/app/components/talk/TurtleCharacter';
 import MicPermission from '@/app/components/talk/MicPermission';
 import MissionSelectView from '@/app/components/talk/MissionSelectView';
@@ -26,9 +28,11 @@ const STATE_LABELS: Record<string, string> = {
 
 function ConversationView() {
   const router = useRouter();
-  const { addMission, completedMissions, activeMissions } = useMissions();
+  const { child } = useChildSession();
+  const childId = child?.childId;
+  const { addMission, completedMissions, activeMissions } = useMissions(childId);
   const { childName, messages: savedMessages, topics, saveChildName, saveMessages, saveTopic } =
-    usePersonalMemory();
+    usePersonalMemory(childId);
 
   const [pendingMissionChoices, setPendingMissionChoices] = useState<MissionSuggestion[] | null>(null);
 
@@ -44,11 +48,11 @@ function ConversationView() {
   // The child's first active mission, if any — passed to the agent for coaching
   const activeMission = activeMissions[0] ?? null;
 
-  // Stable provider instance — one per mount
-  const providerRef = useRef<VapiVoiceProvider | null>(null);
-  if (!providerRef.current) providerRef.current = new VapiVoiceProvider();
+  // Stable provider instance — one per mount (native = /api/talk; vapi = Vapi WebRTC)
+  const providerRef = useRef<ReturnType<typeof createVoiceProvider> | null>(null);
+  if (!providerRef.current) providerRef.current = createVoiceProvider();
 
-  const { state, mood, messages, isMuted, error, toggleMute, endConversation, startListening } =
+  const { state, mood, messages, pendingUserTranscript, isMuted, error, toggleMute, endConversation, startListening } =
     useVoiceSession(providerRef.current, {
       // If missions are pending, don't navigate immediately — MissionSelectView handles it
       onEnd: () => { if (!pendingChoicesRef.current) router.push('/missions'); },
@@ -154,8 +158,8 @@ function ConversationView() {
         <div style={{ width: 40 }} />
       </div>
 
-      {/* ── Turtle ── */}
-      <TurtleCharacter mood={mood} size={220} />
+      {/* ── Turtle (reactions disabled: was mood={mood}) ── */}
+      <TurtleCharacter mood="idle" size={220} />
 
       {/* ── Status label ── */}
       <p
@@ -188,6 +192,9 @@ function ConversationView() {
           <p style={{ color: 'white', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
             Oops! Shelly had a little hiccup.
           </p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0, wordBreak: 'break-word' }}>
+            {getUserFacingMessage(error)}
+          </p>
           <button
             onClick={() => startListening()}
             style={{
@@ -206,7 +213,7 @@ function ConversationView() {
           </button>
         </div>
       ) : (
-        <ConversationSubtitles messages={messages} state={state} />
+        <ConversationSubtitles messages={messages} state={state} pendingUserTranscript={pendingUserTranscript} />
       )}
 
       {/* ── End call — the only prominent control ── */}

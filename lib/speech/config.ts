@@ -3,8 +3,9 @@
  * Every value can be overridden with an environment variable — see .env.local.
  *
  * Voice provider selection:
- *   NEXT_PUBLIC_VOICE_PROVIDER=native  (default) — VAD + MediaRecorder + /api/talk
- *   NEXT_PUBLIC_VOICE_PROVIDER=vapi   — Vapi WebRTC + /api/vapi/llm
+ *   NEXT_PUBLIC_VOICE_PROVIDER=native      (default) — VAD + MediaRecorder + /api/talk
+ *   NEXT_PUBLIC_VOICE_PROVIDER=vapi        — Vapi WebRTC + /api/vapi/llm
+ *   NEXT_PUBLIC_VOICE_PROVIDER=gemini-live — Gemini Live API (real-time bidirectional)
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * STT PROVIDER  (SPEECH_STT_PROVIDER)
@@ -52,9 +53,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * CHAT / LLM PROVIDER  (SPEECH_CHAT_PROVIDER)
  * ─────────────────────────────────────────────────────────────────────────────
- *   gemini     (default) — Google Gemini via LangChain
- *   anthropic  — Anthropic Claude via LangChain
- *   openai     — OpenAI GPT via LangChain
+ *   anthropic  (default) — Claude via LangChain; returns text + tool_calls (recommended for voice)
+ *   openai     — OpenAI GPT via LangChain; returns text + tool_calls
+ *   gemini     — Gemini; with tool use often returns empty content (Shelly may use fallback phrases)
  *
  *   Anthropic models  (SPEECH_ANTHROPIC_MODEL):
  *     claude-haiku-4-5-20251001  ← default | fastest Claude; best price/speed for voice
@@ -85,7 +86,7 @@
  */
 export const speechConfig = {
   /** Which voice conversation provider to use. */
-  voiceProvider: (process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'native') as 'native' | 'vapi',
+  voiceProvider: (process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'native') as 'native' | 'vapi' | 'gemini-live',
 
   stt: {
     provider: (process.env.SPEECH_STT_PROVIDER ?? 'openai') as 'openai' | 'gemini',
@@ -118,7 +119,7 @@ export const speechConfig = {
   },
 
   chat: {
-    provider: (process.env.SPEECH_CHAT_PROVIDER ?? 'gemini') as 'anthropic' | 'openai' | 'gemini',
+    provider: (process.env.SPEECH_CHAT_PROVIDER ?? 'anthropic') as 'anthropic' | 'openai' | 'gemini',
     anthropicModel: process.env.SPEECH_ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001',
     openaiModel: process.env.SPEECH_OPENAI_MODEL ?? 'gpt-4.1-nano',
     geminiModel: process.env.SPEECH_GEMINI_CHAT_MODEL ?? 'gemini-2.5-flash',

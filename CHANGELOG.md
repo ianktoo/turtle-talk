@@ -39,7 +39,7 @@ voice provider can now be swapped in via a single env var without changing UI co
 
 ### Added — `useVoiceSession` hook (`app/hooks/useVoiceSession.ts`)
 
-Drop-in replacement for `useSpeechConversation`. Accepts any `VoiceConversationProvider`
+Thin hook over any `VoiceConversationProvider` (native or Vapi). Same return shape (state, mood, messages, controls).
 instance and returns the same `{ state, mood, messages, isMuted, error, startListening,
 toggleMute, endConversation }` shape.
 
