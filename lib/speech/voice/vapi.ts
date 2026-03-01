@@ -71,14 +71,22 @@ export class VapiVoiceProvider extends BaseVoiceProvider {
         process.env.NEXT_PUBLIC_CUSTOM_LLM_URL ||
         (typeof window !== 'undefined' ? window.location.origin : '');
       // #region agent log
-      fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:start',message:'LLM URL base',data:{hasCustomUrl:!!process.env.NEXT_PUBLIC_CUSTOM_LLM_URL,llmHostIsLocalhost:typeof llmBase==='string'&&(llmBase.includes('localhost')||llmBase.includes('127.0.0.1'))},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      const llmUrl = `${llmBase}/api/vapi/llm`;
+      fetch('http://127.0.0.1:7379/ingest/9dfc6de0-1d29-4c43-9b59-25a539942869',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'83bf97'},body:JSON.stringify({sessionId:'83bf97',location:'vapi.ts:start',message:'Vapi start payload (400 debug)',data:{llmUrl,assistantIdLength:(assistantId||'').length,urlIsHttps:llmUrl.startsWith('https://')},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
       // #endregion
+
+      if (!llmUrl.startsWith('https://')) {
+        this.emit('error', 'Vapi requires an HTTPS URL for the assistant. Set NEXT_PUBLIC_CUSTOM_LLM_URL to your HTTPS tunnel URL (e.g. Cloudflare Tunnel) or test on your live site (e.g. turtletalk.io).');
+        this.emit('stateChange', 'idle');
+        this.emit('moodChange', 'idle');
+        return;
+      }
 
       await this.vapi.start(assistantId, {
         model: {
           provider: 'custom-llm',
           model: 'shelly',
-          url: `${llmBase}/api/vapi/llm`,
+          url: llmUrl,
           metadataSendMode: 'off',
           // Inject per-call context as a system message so /api/vapi/llm can read it
           messages: [{

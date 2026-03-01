@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdminOptional } from '@/lib/supabase/server-admin';
 
+type ProfileRow = { id: string; role: string; access_status: string; suspended_at: string | null };
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -20,12 +22,13 @@ export async function GET() {
       return NextResponse.json({ allowed: true }); // no admin config: allow
     }
 
-    const { data: profile } = await admin
+    const { data } = await admin
       .from('profiles')
       .select('id, role, access_status, suspended_at')
       .eq('id', user.id)
       .single();
 
+    const profile = data as ProfileRow | null;
     if (profile) {
       if (profile.suspended_at) {
         return NextResponse.json({ allowed: false, reason: 'suspended' });
