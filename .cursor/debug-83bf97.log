@@ -34,3 +34,4 @@
 {"sessionId":"83bf97","location":"vapi.ts:stop","message":"Vapi stop() entered","data":{"hadVapi":false},"timestamp":1772335497124,"hypothesisId":"H2"}
 {"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi env check","data":{"hasPublicKey":true,"hasAssistantId":true,"assistantIdLength":36},"timestamp":1772335497134,"hypothesisId":"H1"}
 {"sessionId":"83bf97","location":"vapi.ts:start","message":"Vapi start payload (400 debug)","data":{"llmUrl":"https://localhost:3000//api/vapi/llm","assistantIdLength":36,"urlIsHttps":true},"timestamp":1772335497575,"hypothesisId":"H4"}
+{"sessionId":"83bf97","location":"vapi.ts:stop","message":"Vapi stop() entered","data":{"hadVapi":true},"timestamp":1772337185562,"hypothesisId":"H2"}
