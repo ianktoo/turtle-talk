@@ -63,7 +63,7 @@ export function buildWeeklySummaryFromMissions(
 ): WeeklySummaryPayload {
   const areas = AREAS.map((area) => {
     const matching = missions.filter((m) =>
-      area.themes.includes(m.theme as (typeof area.themes)[number])
+      (area.themes as readonly string[]).includes(m.theme)
     );
     const score = Math.min(matching.length, MAX_SCORE);
     const highlights = matching.slice(0, 5).map((m) => m.title);

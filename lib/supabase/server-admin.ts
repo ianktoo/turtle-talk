@@ -3,11 +3,12 @@
  * Use only in API routes or server code that must bypass RLS (e.g. child login lookup).
  * Never expose this client to the browser.
  */
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { AdminDatabase } from './admin-database';
 
-let adminClient: ReturnType<typeof createClient> | null = null;
+let adminClient: SupabaseClient<AdminDatabase> | null = null;
 
-export function getSupabaseAdmin() {
+export function getSupabaseAdmin(): SupabaseClient<AdminDatabase> {
   if (adminClient) return adminClient;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,7 +17,7 @@ export function getSupabaseAdmin() {
       'SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL are required for admin operations'
     );
   }
-  adminClient = createClient(url, key, {
+  adminClient = createClient<AdminDatabase>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return adminClient;
@@ -25,7 +26,7 @@ export function getSupabaseAdmin() {
 /**
  * Optional: returns null if service role is not configured (e.g. dev without Supabase Auth).
  */
-export function getSupabaseAdminOptional(): ReturnType<typeof createClient> | null {
+export function getSupabaseAdminOptional(): SupabaseClient<AdminDatabase> | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;

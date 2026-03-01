@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    type ChildRow = { id: string; first_name: string; emoji: string; login_key: string };
     const { data: rows, error } = await supabase
       .from('children')
       .select('id, first_name, emoji, login_key')
@@ -57,9 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const child = (rows ?? []).find(
-      (r: { first_name: string; emoji: string }) =>
-        normalizeFirstName(r.first_name) === name && r.emoji === emoji
+    const child = ((rows ?? []) as ChildRow[]).find(
+      (r) => normalizeFirstName(r.first_name) === name && r.emoji === emoji
     );
 
     if (!child) {

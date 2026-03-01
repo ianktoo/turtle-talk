@@ -14,6 +14,14 @@ import type { ConversationContext, Message } from '@/lib/speech/types';
 
 export const maxDuration = 60;
 
+/** GET returns a short description so visiting the URL in a browser doesn't 405. */
+export async function GET() {
+  return Response.json({
+    endpoint: 'Vapi custom LLM',
+    usage: 'POST with JSON body { messages: [...] } (OpenAI chat completion format). Used by Vapi; do not call from browser.',
+  });
+}
+
 const FALLBACK_TEXT = "Oh my! Let's talk about something else. What's your favourite animal?";
 
 type OAIMessage = { role: string; content: string };

@@ -247,11 +247,11 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
             if (childName) this.emit('childName', childName);
             if (topic) this.emit('topic', topic);
 
-            const updated: Message[] = [
+            const updated = [
               ...this.messages,
-              { role: 'user', content: userText },
-              { role: 'assistant', content: responseText },
-            ].slice(-MAX_CONVERSATION_MESSAGES);
+              { role: 'user' as const, content: userText },
+              { role: 'assistant' as const, content: responseText },
+            ].slice(-MAX_CONVERSATION_MESSAGES) as Message[];
             this.messages = updated;
             this.emit('messages', updated);
 
