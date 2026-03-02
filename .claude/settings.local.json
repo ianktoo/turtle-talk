@@ -11,7 +11,10 @@
       "WebSearch",
       "Bash(vercel logs:*)",
       "Bash(vercel:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "WebFetch(domain:developers.openai.com)",
+      "Bash(npm run:*)",
+      "Bash(ls:*)"
     ]
   }
 }
