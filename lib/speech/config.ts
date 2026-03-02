@@ -6,6 +6,8 @@
  *   NEXT_PUBLIC_VOICE_PROVIDER=native      (default) — VAD + MediaRecorder + /api/talk
  *   NEXT_PUBLIC_VOICE_PROVIDER=vapi        — Vapi WebRTC + /api/vapi/llm
  *   NEXT_PUBLIC_VOICE_PROVIDER=gemini-live — Gemini Live API (real-time bidirectional)
+ *   NEXT_PUBLIC_VOICE_PROVIDER=livekit     — LiveKit room + agent (Chirp STT, Gemini LLM/TTS)
+ *   NEXT_PUBLIC_VOICE_PROVIDER=openai-realtime — OpenAI WebRTC Realtime API (gpt-4o-mini-realtime-preview)
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * STT PROVIDER  (SPEECH_STT_PROVIDER)
@@ -86,7 +88,7 @@
  */
 export const speechConfig = {
   /** Which voice conversation provider to use. */
-  voiceProvider: (process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'native') as 'native' | 'vapi' | 'gemini-live',
+  voiceProvider: (process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'native') as 'native' | 'vapi' | 'gemini-live' | 'livekit' | 'openai-realtime',
 
   stt: {
     provider: (process.env.SPEECH_STT_PROVIDER ?? 'openai') as 'openai' | 'gemini',
@@ -124,5 +126,11 @@ export const speechConfig = {
     openaiModel: process.env.SPEECH_OPENAI_MODEL ?? 'gpt-4.1-nano',
     geminiModel: process.env.SPEECH_GEMINI_CHAT_MODEL ?? 'gemini-2.5-flash',
     maxTokens: parseInt(process.env.SPEECH_CHAT_MAX_TOKENS ?? '512', 10),
+  },
+
+  openaiRealtime: {
+    model: process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-4o-mini-realtime-preview',
+    voice: (process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE ?? 'sage') as
+      'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse' | 'marin' | 'cedar',
   },
 } as const;
