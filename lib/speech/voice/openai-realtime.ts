@@ -192,7 +192,6 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
   private mediaStream: MediaStream | null = null;
   private messages: Message[] = [];
   private _generation = 0;
-  private _muted = false;
   private pendingEnd = false;
   private pendingMissions: MissionSuggestion[] | null = null;
   private pendingToolCalls: PendingToolCall[] = [];
@@ -460,7 +459,6 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
   }
 
   setMuted(muted: boolean): void {
-    this._muted = muted;
     this.mediaStream?.getTracks().forEach((t) => {
       t.enabled = !muted;
     });
