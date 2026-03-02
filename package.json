@@ -24,6 +24,8 @@
     "@vercel/analytics": "^1.6.1",
     "convex": "^1.32.0",
     "langchain": "^0.3.37",
+    "livekit-client": "^2.17.2",
+    "livekit-server-sdk": "^2.15.0",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
     "react": "19.2.3",
@@ -47,6 +49,7 @@
     "eslint-config-next": "16.1.6",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "jest-environment-node": "^30.2.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
