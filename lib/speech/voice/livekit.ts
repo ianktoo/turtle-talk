@@ -102,8 +102,8 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
 
       this.room = room;
 
-      const localTrack = await room.localParticipant.enableMicrophone(true);
-      if (localTrack && this._muted) localTrack.mute();
+      await room.localParticipant.setMicrophoneEnabled(true);
+      if (this._muted) await room.localParticipant.setMicrophoneEnabled(false);
     } catch (err) {
       if (this._generation !== gen) return;
       const msg = err instanceof Error ? err.message : 'Failed to connect to LiveKit';
@@ -125,10 +125,8 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
 
   setMuted(muted: boolean): void {
     this._muted = muted;
-    if (this.room?.localParticipant?.audioTrackPublications) {
-      this.room.localParticipant.audioTrackPublications.forEach((pub) => {
-        if (pub.track) pub.track.mute(muted);
-      });
+    if (this.room) {
+      void this.room.localParticipant.setMicrophoneEnabled(!muted);
     }
   }
 }
