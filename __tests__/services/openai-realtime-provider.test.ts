@@ -179,11 +179,14 @@ test('start() emits error when SDP negotiation fails', async () => {
 test('stop() emits stateChange:ended and end', () => {
   const p = new OpenAIRealtimeVoiceProvider();
   const states: string[] = [];
+  const moods: string[] = [];
   let ended = false;
   p.on('stateChange', (s) => states.push(s));
+  p.on('moodChange', (m) => moods.push(m));
   p.on('end', () => { ended = true; });
   p.stop();
   expect(states).toContain('ended');
+  expect(moods).toContain('idle');
   expect(ended).toBe(true);
 });
 
@@ -337,6 +340,20 @@ test('tool call results are submitted as function_call_output', async () => {
   const item = outputEvent!.item as Record<string, unknown>;
   expect(item.type).toBe('function_call_output');
   expect(item.call_id).toBe('call-99');
+});
+
+test('response.audio_transcript.done → appends assistant message and emits messages', async () => {
+  const { p, dc } = await startAndGetDc();
+  const allMessages: unknown[] = [];
+  p.on('messages', (m) => { allMessages.push(...m); });
+  dc.simulateMessage({
+    type: 'response.audio_transcript.done',
+    transcript: 'Hello there, what did you do today?',
+  });
+  expect(allMessages.some((m) => {
+    const msg = m as { role: string; content: string };
+    return msg.role === 'assistant' && msg.content === 'Hello there, what did you do today?';
+  })).toBe(true);
 });
 
 // ─── System prompt building ───────────────────────────────────────────────
