@@ -3,9 +3,8 @@
 import type { Message, TurtleMood, MissionSuggestion } from '../types';
 import type { VoiceSessionOptions } from './types';
 import { BaseVoiceProvider } from './base';
+import { speechConfig } from '../config';
 
-const DEFAULT_MODEL = 'gpt-4o-mini-realtime-preview';
-const DEFAULT_VOICE = 'sage';
 const SDP_ENDPOINT = 'https://api.openai.com/v1/realtime';
 
 // ---------------------------------------------------------------------------
@@ -202,8 +201,8 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
     this.emit('moodChange', 'listening');
     this.messages = options.initialMessages ? [...options.initialMessages] : [];
 
-    const model = process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? DEFAULT_MODEL;
-    const voice = process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE ?? DEFAULT_VOICE;
+    const model = speechConfig.openaiRealtime.model;
+    const voice = speechConfig.openaiRealtime.voice;
 
     try {
       // 1. Mint ephemeral key server-side
@@ -241,10 +240,6 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
       this.audioEl.autoplay = true;
       this.pc.ontrack = (e) => {
         if (this.audioEl) this.audioEl.srcObject = e.streams[0];
-        if (this._generation === gen) {
-          this.emit('stateChange', 'speaking');
-          this.emit('moodChange', 'talking');
-        }
       };
 
       // 5. Local mic track
