@@ -20,11 +20,14 @@ const STARS = [
 
 function Cloud({ style }: { style: React.CSSProperties }) {
   return (
-    <div className="absolute flex items-end pointer-events-none" style={style}>
-      <div className="rounded-full bg-white/75" style={{ width: 40, height: 40, marginBottom: -6 }} />
-      <div className="rounded-full bg-white/85" style={{ width: 72, height: 56, margin: "0 -12px" }} />
-      <div className="rounded-full bg-white/75" style={{ width: 40, height: 40, marginBottom: -6 }} />
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/cloud.svg"
+      alt=""
+      aria-hidden="true"
+      className="absolute pointer-events-none"
+      style={{ width: 220, height: 220, ...style }}
+    />
   );
 }
 
