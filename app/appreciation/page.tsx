@@ -1,25 +1,47 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { User } from 'lucide-react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { User, Lock } from 'lucide-react';
 import { useChildSession } from '@/app/hooks/useChildSession';
 import { useTree } from '@/app/hooks/useTree';
 import { useEncouragement } from '@/app/hooks/useEncouragement';
+import { useWishList } from '@/app/hooks/useWishList';
 import ChildLoginModal from '@/app/components/ChildLoginModal';
 import ChristmasTree from '@/app/appreciation/ChristmasTree';
 import DecorationBox from '@/app/appreciation/DecorationBox';
 
 const DUMMY_TREE = { growth_stage: 0, placed_count: 0, placed_decorations: [] as { emoji: string; slotId: string }[] };
 
+const TREE_SLOTS = 10;
+
 export default function AppreciationPage() {
+  return (
+    <Suspense>
+      <AppreciationPageInner />
+    </Suspense>
+  );
+}
+
+function AppreciationPageInner() {
+  const searchParams = useSearchParams();
   const { child, refetch: refetchSession } = useChildSession();
   const { tree, isLoading: treeLoading, refetch: refetchTree, placeOnTree } = useTree();
   const { items: encouragementItems, refetch: refetchEncouragement } = useEncouragement();
+  const { items: wishListItems, isLoading: wishListLoading, refetch: refetchWishList } = useWishList(null, {
+    fetchWhenChildIdNull: true,
+  });
   const [selectedEncouragementId, setSelectedEncouragementId] = useState<string | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const [unlockToast, setUnlockToast] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [decorationModalOpen, setDecorationModalOpen] = useState(false);
+
+  // Open decoration picker when nav gift link is used (?open=decorate)
+  useEffect(() => {
+    if (searchParams.get('open') === 'decorate') setDecorationModalOpen(true);
+  }, [searchParams]);
 
   const isGuest = !child;
   const treeState = isGuest ? DUMMY_TREE : (tree ?? null);
@@ -37,6 +59,7 @@ export default function AppreciationPage() {
         setSelectedEncouragementId(null);
         refetchTree();
         refetchEncouragement();
+        refetchWishList();
         if (result.unlocked) setUnlockToast(true);
       } catch (e) {
         console.error('[Appreciation] placeOnTree', e);
@@ -44,8 +67,10 @@ export default function AppreciationPage() {
         setIsPlacing(false);
       }
     },
-    [isPlacing, isGuest, placeOnTree, refetchTree, refetchEncouragement]
+    [isPlacing, isGuest, placeOnTree, refetchTree, refetchEncouragement, refetchWishList]
   );
+
+  const progressPercent = Math.min(100, (placedCount / TREE_SLOTS) * 100);
 
   return (
     <>
@@ -91,6 +116,7 @@ export default function AppreciationPage() {
           <div style={{ position: 'relative' }}>
             <button
               type="button"
+              className="tt-tap-shake"
               onClick={() => (isGuest ? setLoginModalOpen(true) : setProfileOpen((o) => !o))}
               aria-label={isGuest ? 'Log in' : `Logged in as ${child?.firstName ?? 'child'}`}
               style={{
@@ -204,13 +230,42 @@ export default function AppreciationPage() {
               <p
                 style={{
                   marginTop: 10,
+                  marginBottom: 6,
                   fontSize: '0.9rem',
                   color: 'var(--tt-text-primary)',
                   fontWeight: 600,
                 }}
               >
-                {placedCount} of 10 — fill it up to unlock a wish!
+                {placedCount} of {TREE_SLOTS} — fill it up to unlock a wish!
               </p>
+              {/* Colorful progress bar to 100% tree decoration */}
+              <div
+                role="progressbar"
+                aria-valuenow={placedCount}
+                aria-valuemin={0}
+                aria-valuemax={TREE_SLOTS}
+                aria-label={`Tree decoration progress ${placedCount} of ${TREE_SLOTS}`}
+                style={{
+                  width: '100%',
+                  maxWidth: 200,
+                  height: 14,
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.2)',
+                  overflow: 'hidden',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${progressPercent}%`,
+                    height: '100%',
+                    borderRadius: 10,
+                    background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #22c55e, #16a34a)',
+                    boxShadow: '0 0 12px rgba(251,191,36,0.4)',
+                    transition: 'width 0.4s ease-out',
+                  }}
+                />
+              </div>
               {isGuest && (
                 <p
                   style={{
@@ -224,21 +279,190 @@ export default function AppreciationPage() {
                 </p>
               )}
             </div>
-            <DecorationBox
-              items={displayItems}
-              selectedId={selectedEncouragementId}
-              onSelect={setSelectedEncouragementId}
-              onPlaceOnTree={handlePlaceOnTree}
-              isPlacing={isPlacing}
-            />
+            <button
+              type="button"
+              className="tt-tap-shake"
+              onClick={() => setDecorationModalOpen(true)}
+              style={{
+                flexShrink: 0,
+                width: '100%',
+                maxWidth: 200,
+                padding: 16,
+                borderRadius: 16,
+                background: 'rgba(120,53,15,0.4)',
+                border: '2px solid rgba(180,83,9,0.6)',
+                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--tt-text-primary)' }}>
+                Pick a cheer and put it on your tree
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '1.2rem' }}>🎁</p>
+            </button>
           </div>
+
+          {/* Wish list below the tree — each tree completed unlocks an item (padlock for locked) */}
+          <section
+            aria-label="My wish list"
+            style={{
+              width: '100%',
+              marginTop: 8,
+              paddingTop: 24,
+              borderTop: '1px solid rgba(255,255,255,0.12)',
+            }}
+          >
+            <h2
+              style={{
+                margin: '0 0 12px',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color: 'var(--tt-text-primary)',
+                textAlign: 'center',
+              }}
+            >
+              My Wish List
+            </h2>
+            <p
+              style={{
+                margin: '0 0 16px',
+                fontSize: '0.85rem',
+                color: 'var(--tt-text-secondary)',
+                textAlign: 'center',
+              }}
+            >
+              Fill your tree to unlock wishes!
+            </p>
+            {!isGuest && wishListLoading ? (
+              <p style={{ color: 'var(--tt-text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
+                Loading…
+              </p>
+            ) : wishListItems.length === 0 ? (
+              <p
+                style={{
+                  color: 'var(--tt-text-secondary)',
+                  fontSize: '0.9rem',
+                  textAlign: 'center',
+                  lineHeight: 1.5,
+                }}
+              >
+                Your grown-up can add wishes for you. Decorate your tree to unlock them!
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {wishListItems.map((item) => {
+                  const locked = !item.unlocked_at;
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '14px 18px',
+                        borderRadius: 14,
+                        background: locked
+                          ? 'rgba(255,255,255,0.06)'
+                          : 'rgba(34,197,94,0.18)',
+                        border: locked
+                          ? '1px solid rgba(255,255,255,0.15)'
+                          : '2px solid rgba(34,197,94,0.45)',
+                        color: locked ? 'var(--tt-text-secondary)' : 'var(--tt-text-primary)',
+                        fontSize: '1rem',
+                        fontWeight: locked ? 500 : 600,
+                      }}
+                    >
+                      {locked ? (
+                        <Lock size={20} style={{ flexShrink: 0, opacity: 0.8 }} aria-hidden />
+                      ) : null}
+                      <span>{locked ? '???' : item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
+
+        {/* Decoration picker modal — primary action: select earned cheers/gifts and decorate tree */}
+        {decorationModalOpen && (
+          <>
+            <div
+              role="presentation"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0,0,0,0.6)',
+                zIndex: 35,
+              }}
+              onClick={() => setDecorationModalOpen(false)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Pick a cheer or gift to put on your tree"
+              style={{
+                position: 'fixed',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 36,
+                width: 'calc(100% - 32px)',
+                maxWidth: 340,
+                padding: 20,
+                borderRadius: 20,
+                background: 'rgba(20, 45, 80, 0.96)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p
+                style={{
+                  margin: '0 0 16px',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: 'var(--tt-text-primary)',
+                  textAlign: 'center',
+                }}
+              >
+                Pick earned cheers & gifts to put on your tree
+              </p>
+              <DecorationBox
+                items={displayItems}
+                selectedId={selectedEncouragementId}
+                onSelect={setSelectedEncouragementId}
+                onPlaceOnTree={handlePlaceOnTree}
+                isPlacing={isPlacing}
+              />
+              <button
+                type="button"
+                onClick={() => setDecorationModalOpen(false)}
+                style={{
+                  marginTop: 12,
+                  width: '100%',
+                  padding: '10px 16px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  background: 'transparent',
+                  color: 'var(--tt-text-primary)',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </>
+        )}
 
         {unlockToast && (
           <button
             type="button"
             role="alert"
             aria-label="Dismiss"
+            className="tt-success-pop"
             onClick={() => setUnlockToast(false)}
             style={{
               position: 'fixed',
