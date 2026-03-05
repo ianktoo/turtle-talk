@@ -147,12 +147,12 @@ body {
 
 /* Cloud drift */
 @keyframes cloudDrift1 {
-  from { transform: translateX(-280px); }
-  to   { transform: translateX(calc(100vw + 280px)); }
+  from { transform: translateX(-60vw); }
+  to   { transform: translateX(100vw); }
 }
 @keyframes cloudDrift2 {
-  from { transform: translateX(-220px); }
-  to   { transform: translateX(calc(100vw + 220px)); }
+  from { transform: translateX(-45vw); }
+  to   { transform: translateX(100vw); }
 }
 
 /* Ocean wave shimmer */

@@ -18,7 +18,7 @@ const STARS = [
   { x: 23, y: 26, r: 1,   delay: "1.9s" },
 ];
 
-function Cloud({ style }: { style: React.CSSProperties }) {
+function CloudLayer({ style }: { style?: React.CSSProperties }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -26,7 +26,7 @@ function Cloud({ style }: { style: React.CSSProperties }) {
       alt=""
       aria-hidden="true"
       className="absolute pointer-events-none"
-      style={{ width: 220, height: 220, ...style }}
+      style={style}
     />
   );
 }
@@ -111,22 +111,26 @@ export default function Scene() {
         }}
       />
 
-      {/* Clouds */}
-      <Cloud
+      {/* Clouds — full SVG sprite drifting as wide layers */}
+      <CloudLayer
         style={{
-          top: "12%",
+          top: "5%",
           left: 0,
-          animation: `cloudDrift1 28s linear infinite`,
+          width: "60vw",
+          height: "auto",
+          animation: `cloudDrift1 60s linear infinite`,
+          opacity: 0.9,
         }}
       />
-      <Cloud
+      <CloudLayer
         style={{
-          top: "22%",
+          top: "15%",
           left: 0,
-          animation: `cloudDrift2 38s linear infinite`,
-          animationDelay: "-14s",
-          opacity: 0.85,
-          transform: "scale(0.75)",
+          width: "45vw",
+          height: "auto",
+          animation: `cloudDrift2 80s linear infinite`,
+          animationDelay: "-30s",
+          opacity: 0.7,
         }}
       />
 
