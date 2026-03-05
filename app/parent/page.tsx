@@ -44,6 +44,7 @@ export default function ParentPage() {
   const [childrenModalOpen, setChildrenModalOpen] = useState(false);
   const [newWishLabel, setNewWishLabel] = useState('');
   const [wishListError, setWishListError] = useState<string | null>(null);
+  const [confirmWishId, setConfirmWishId] = useState<string | null>(null);
   const [encouragementSending, setEncouragementSending] = useState(false);
 
   const { items: wishListItems, isLoading: wishListLoading, refetch: refetchWishList } = useWishList(activeChild?.id ?? null);
@@ -146,23 +147,15 @@ export default function ParentPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
-        <p style={{ color: '#6b7280' }}>Loading…</p>
+      <div className="parent-dashboard" style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--pd-bg-gradient)' }}>
+        <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>Loading…</p>
       </div>
     );
   }
 
   if (children.length === 0) {
     return (
-      <div
-        style={{
-          minHeight: '100dvh',
-          background: '#f9fafb',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+      <div className="parent-dashboard" style={{ minHeight: '100dvh', background: 'var(--pd-bg-gradient)', display: 'flex', flexDirection: 'column' }}>
         <ParentHeader
           children={[]}
           activeChild={null}
@@ -172,50 +165,37 @@ export default function ParentPage() {
           onOpenChildrenModal={() => setChildrenModalOpen(true)}
           onCloseChildrenModal={() => setChildrenModalOpen(false)}
         />
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-          }}
-        >
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-            Add your first child
-          </h1>
-          <p style={{ color: '#6b7280', marginBottom: 24, textAlign: 'center' }}>
-            Create a profile so they can log in and use TurtleTalk.
-          </p>
-          <button
-            onClick={() => setChildrenModalOpen(true)}
-            style={{
-              padding: '14px 24px',
-              borderRadius: 12,
-              border: 'none',
-              background: '#0f766e',
-              color: 'white',
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Add child
-          </button>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div className="pd-card-elevated" style={{ padding: 32, borderRadius: 20, textAlign: 'center', maxWidth: 360 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--pd-text-primary)', marginBottom: 8 }}>
+              Add your first child
+            </h1>
+            <p style={{ color: 'var(--pd-text-secondary)', marginBottom: 24, fontSize: 15 }}>
+              Create a profile so they can log in and use TurtleTalk.
+            </p>
+            <button
+              onClick={() => setChildrenModalOpen(true)}
+              style={{
+                padding: '14px 24px',
+                borderRadius: 12,
+                border: 'none',
+                background: 'var(--pd-accent)',
+                color: 'white',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Add child
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100dvh',
-        background: '#f9fafb',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
+    <div className="parent-dashboard" style={{ minHeight: '100dvh', background: 'var(--pd-bg-gradient)' }}>
       <ParentHeader
         children={children}
         activeChild={activeChild}
@@ -227,42 +207,37 @@ export default function ParentPage() {
       />
 
       {activeChild && (
-        <main
-          style={{
-            maxWidth: 720,
-            margin: '0 auto',
-            padding: '32px 20px 60px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 48,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 44 }}>{activeChild.avatar}</span>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111827' }}>
+        <main style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 60px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+          {/* Hero card: child + progress */}
+          <div className="pd-card-elevated" style={{ padding: '24px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 48 }} aria-hidden>{activeChild.avatar}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--pd-text-primary)', letterSpacing: '-0.02em' }}>
                 {activeChild.name}&apos;s Progress
               </h1>
-              <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>
+              <p style={{ margin: '4px 0 0', fontSize: 15, color: 'var(--pd-text-secondary)' }}>
                 {activeChild.completedMissions} missions completed
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
-              <label htmlFor="week-picker" style={{ fontSize: 14, color: '#6b7280' }}>
-                Week:
+          {/* Week + Weekly summary card */}
+          <div className="pd-card" style={{ padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+              <label htmlFor="week-picker" style={{ fontSize: 13, fontWeight: 500, color: 'var(--pd-text-tertiary)' }}>
+                Week
               </label>
               <select
                 id="week-picker"
                 value={weekStart}
                 onChange={(e) => setWeekStart(e.target.value)}
                 style={{
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #e5e7eb',
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid var(--pd-card-border)',
                   fontSize: 14,
-                  background: '#fff',
+                  background: 'var(--pd-input-bg)',
+                  color: 'var(--pd-text-primary)',
                 }}
               >
                 {getWeekOptions().map((opt) => (
@@ -272,14 +247,17 @@ export default function ParentPage() {
                 ))}
               </select>
             </div>
-            {weeklyReportLoading && <p style={{ color: '#6b7280', fontSize: 14 }}>Loading…</p>}
+            {weeklyReportLoading && <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>Loading…</p>}
             {!weeklyReportLoading && weeklySummary && <WeeklySummary data={weeklySummary} />}
             {!weeklyReportLoading && !weeklySummary && (
-              <p style={{ color: '#6b7280', fontSize: 14 }}>
+              <p style={{ color: 'var(--pd-text-secondary)', fontSize: 15 }}>
                 No summary for this week yet. Completed missions will appear here.
               </p>
             )}
-          <DinnerQuestions
+          </div>
+
+          <div className="pd-card" style={{ padding: 24 }}>
+            <DinnerQuestions
             questions={dinnerQuestions}
             loading={dinnerQuestionsLoading}
             onMarkComplete={handleMarkDinnerComplete}
@@ -291,18 +269,19 @@ export default function ParentPage() {
               No summary or dinner questions yet. When {activeChild.name} completes missions and you have reports, they’ll appear here.
             </p>
           )}
+          </div>
 
-          <section>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+          <div className="pd-card" style={{ padding: 24 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--pd-text-primary)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
               Wish list
             </h2>
-            <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 12px' }}>
+            <p style={{ fontSize: 15, color: 'var(--pd-text-secondary)', margin: '0 0 14px' }}>
               Items for {activeChild.name} (e.g. for Christmas). They see these on their tree page; a full tree unlocks one wish.
             </p>
             {wishListError && (
-              <p style={{ fontSize: 14, color: '#dc2626', margin: '0 0 8px' }}>{wishListError}</p>
+              <p style={{ fontSize: 14, color: 'var(--pd-error)', margin: '0 0 8px' }}>{wishListError}</p>
             )}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
               <input
                 type="text"
                 placeholder="e.g. LEGO set"
@@ -311,9 +290,11 @@ export default function ParentPage() {
                 style={{
                   flex: 1,
                   padding: '10px 14px',
-                  borderRadius: 8,
-                  border: '1px solid #e5e7eb',
-                  fontSize: 14,
+                  borderRadius: 10,
+                  border: '1px solid var(--pd-card-border)',
+                  fontSize: 15,
+                  background: 'var(--pd-input-bg)',
+                  color: 'var(--pd-text-primary)',
                 }}
               />
               <button
@@ -331,11 +312,11 @@ export default function ParentPage() {
                 }}
                 style={{
                   padding: '10px 18px',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   border: 'none',
-                  background: '#0f766e',
+                  background: 'var(--pd-accent)',
                   color: 'white',
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -344,9 +325,9 @@ export default function ParentPage() {
               </button>
             </div>
             {wishListLoading ? (
-              <p style={{ color: '#6b7280', fontSize: 14 }}>Loading wish list…</p>
+              <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>Loading wish list…</p>
             ) : wishListItems.length === 0 ? (
-              <p style={{ color: '#6b7280', fontSize: 14 }}>No items yet. Add one above.</p>
+              <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>No items yet. Add one above.</p>
             ) : (
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {wishListItems.map((item) => (
@@ -356,47 +337,71 @@ export default function ParentPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: 8,
-                      background: item.unlocked_at ? '#dcfce7' : '#f9fafb',
-                      border: '1px solid #e5e7eb',
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      background: item.unlocked_at ? 'var(--pd-success-soft)' : 'var(--pd-surface-soft)',
+                      border: `1px solid ${item.unlocked_at ? 'var(--pd-success-border)' : 'var(--pd-card-border)'}`,
                     }}
                   >
-                    <span style={{ fontSize: 14, color: '#111827' }}>
+                    <span style={{ fontSize: 15, color: 'var(--pd-text-primary)' }}>
                       {item.unlocked_at ? '🎉 ' : ''}{item.label}
                     </span>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await deleteWishItem(item.id);
-                        } catch (e) {
-                          setWishListError(e instanceof Error ? e.message : 'Failed to delete');
-                        }
-                      }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: 6,
-                        border: '1px solid #e5e7eb',
-                        background: '#fff',
-                        fontSize: 12,
-                        color: '#6b7280',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Remove
-                    </button>
+                    {confirmWishId === item.id ? (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmWishId(null)}
+                          style={{
+                            padding: '6px 8px', fontSize: 12,
+                            border: '1px solid var(--pd-card-border)',
+                            borderRadius: 8, background: 'var(--pd-surface-overlay)',
+                            cursor: 'pointer', color: 'var(--pd-text-secondary)',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setConfirmWishId(null);
+                            try { await deleteWishItem(item.id); }
+                            catch (e) { setWishListError(e instanceof Error ? e.message : 'Failed to delete'); }
+                          }}
+                          style={{
+                            padding: '6px 8px', fontSize: 12,
+                            border: '1px solid rgba(220,38,38,0.3)',
+                            borderRadius: 8, background: 'var(--pd-surface-overlay)',
+                            color: 'var(--pd-error)', cursor: 'pointer',
+                          }}
+                        >
+                          Sure?
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmWishId(item.id)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 8,
+                          border: '1px solid var(--pd-card-border)',
+                          background: 'var(--pd-surface-overlay)',
+                          fontSize: 13, color: 'var(--pd-text-secondary)', cursor: 'pointer',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </div>
 
-          <section>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+          <div className="pd-card" style={{ padding: 24 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--pd-text-primary)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
               Send a cheer
             </h2>
-            <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 12px' }}>
+            <p style={{ fontSize: 15, color: 'var(--pd-text-secondary)', margin: '0 0 14px' }}>
               Send {activeChild.name} an emoji. They can use it to decorate their tree and grow it.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -417,10 +422,11 @@ export default function ParentPage() {
                     width: 48,
                     height: 48,
                     borderRadius: 12,
-                    border: '2px solid #e5e7eb',
-                    background: '#fff',
+                    border: '1px solid var(--pd-card-border)',
+                    background: 'var(--pd-surface-soft)',
                     fontSize: 24,
                     cursor: encouragementSending ? 'wait' : 'pointer',
+                    boxShadow: 'var(--pd-shadow-sm)',
                   }}
                   aria-label={`Send ${emoji} to ${activeChild.name}`}
                 >
@@ -428,13 +434,13 @@ export default function ParentPage() {
                 </button>
               ))}
             </div>
-          </section>
+          </div>
 
-          <section>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+          <div className="pd-card" style={{ padding: 24 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--pd-text-primary)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
               Recommended Books
             </h2>
-            <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 20px' }}>
+            <p style={{ fontSize: 15, color: 'var(--pd-text-secondary)', margin: '0 0 18px' }}>
               Based on what {activeChild.name} practised
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -442,7 +448,7 @@ export default function ParentPage() {
                 <BookCard key={book.id} book={book} />
               ))}
             </div>
-          </section>
+          </div>
         </main>
       )}
     </div>
