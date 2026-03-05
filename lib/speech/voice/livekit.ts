@@ -73,22 +73,7 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
 
       room.on(RoomEvent.DataReceived, (payload: Uint8Array) => {
         if (this._generation !== gen) return;
-        try {
-          const text = new TextDecoder().decode(payload);
-          const parsed = JSON.parse(text) as {
-            type?: string;
-            text?: string;
-            role?: 'user' | 'assistant';
-          };
-          if (parsed.type === 'transcript' && typeof parsed.text === 'string') {
-            const role = parsed.role === 'assistant' ? 'assistant' : 'user';
-            this.emit('userTranscript', parsed.text);
-            this._messages = [...this._messages, { role, content: parsed.text }];
-            this.emit('messages', this._messages);
-          }
-        } catch {
-          // ignore non-JSON or other data
-        }
+        this.handleData(payload);
       });
 
       room.on(RoomEvent.TrackSubscribed, (track, _pub, _participant) => {
@@ -160,6 +145,30 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
       this.emit('error', msg);
       this.emit('stateChange', 'idle');
       this.emit('moodChange', 'idle');
+    }
+  }
+
+  private handleData(payload: Uint8Array): void {
+    try {
+      const text = new TextDecoder().decode(payload);
+      const parsed = JSON.parse(text) as {
+        type?: string;
+        text?: string;
+        role?: 'user' | 'assistant';
+        choices?: unknown[];
+      };
+      if (parsed.type === 'transcript' && typeof parsed.text === 'string') {
+        const role = parsed.role === 'assistant' ? 'assistant' : 'user';
+        this.emit('userTranscript', parsed.text);
+        this._messages = [...this._messages, { role, content: parsed.text }];
+        this.emit('messages', this._messages);
+      } else if (parsed.type === 'missionChoices' && Array.isArray(parsed.choices)) {
+        this.emit('missionChoices', parsed.choices as import('../types').MissionSuggestion[]);
+      } else if (parsed.type === 'endConversation') {
+        this.stop();
+      }
+    } catch {
+      // ignore non-JSON or other data
     }
   }
 

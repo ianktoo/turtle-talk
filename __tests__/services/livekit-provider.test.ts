@@ -233,4 +233,33 @@ describe('LiveKitVoiceProvider', () => {
       expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(true);
     });
   });
+
+  describe('data channel (handleData)', () => {
+    it('emits missionChoices when agent sends missionChoices data message', () => {
+      const choices = [
+        { title: 'Draw a turtle', description: 'Draw a picture', difficulty: 'easy' },
+        { title: 'Read a book', description: 'Read for 10 mins', difficulty: 'medium' },
+        { title: 'Write a story', description: 'Write 5 sentences', difficulty: 'stretch' },
+      ];
+      const payload = Buffer.from(JSON.stringify({ type: 'missionChoices', choices }));
+
+      const provider = new LiveKitVoiceProvider();
+      const onChoices = jest.fn();
+      provider.on('missionChoices', onChoices);
+
+      (provider as any).handleData(payload);
+
+      expect(onChoices).toHaveBeenCalledWith(choices);
+    });
+
+    it('calls stop() when agent sends endConversation data message', () => {
+      const provider = new LiveKitVoiceProvider();
+      const stopSpy = jest.spyOn(provider, 'stop');
+      const payload = Buffer.from(JSON.stringify({ type: 'endConversation' }));
+
+      (provider as any).handleData(payload);
+
+      expect(stopSpy).toHaveBeenCalled();
+    });
+  });
 });
