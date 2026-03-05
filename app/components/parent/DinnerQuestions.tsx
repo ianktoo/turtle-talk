@@ -191,6 +191,26 @@ export function DinnerQuestions({
                 >
                   {q.question}
                 </span>
+                {q.theme && (
+                  <span
+                    style={{
+                      marginLeft: 10,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--pd-accent)',
+                      background: 'var(--pd-accent-soft)',
+                      border: '1px solid var(--pd-accent)',
+                      borderRadius: 4,
+                      padding: '1px 5px',
+                      whiteSpace: 'nowrap',
+                      letterSpacing: '0.03em',
+                      flexShrink: 0,
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    {q.theme}
+                  </span>
+                )}
               </button>
             );
           })}
