@@ -247,7 +247,16 @@ export default function ParentPage() {
                 ))}
               </select>
             </div>
-            {weeklyReportLoading && <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>Loading…</p>}
+            {weeklyReportLoading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="pd-skeleton" style={{ height: 20, width: '60%' }} />
+                <div className="pd-skeleton" style={{ height: 16, width: '40%' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="pd-skeleton" style={{ height: 80 }} />
+                  <div className="pd-skeleton" style={{ height: 80 }} />
+                </div>
+              </div>
+            )}
             {!weeklyReportLoading && weeklySummary && <WeeklySummary data={weeklySummary} />}
             {!weeklyReportLoading && !weeklySummary && (
               <p style={{ color: 'var(--pd-text-secondary)', fontSize: 15 }}>
@@ -325,7 +334,11 @@ export default function ParentPage() {
               </button>
             </div>
             {wishListLoading ? (
-              <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>Loading wish list…</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[100, 85].map((w, i) => (
+                  <div key={i} className="pd-skeleton" style={{ height: 44, width: `${w}%`, borderRadius: 12 }} />
+                ))}
+              </div>
             ) : wishListItems.length === 0 ? (
               <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>No items yet. Add one above.</p>
             ) : (

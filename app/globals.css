@@ -232,6 +232,9 @@ body {
   .tt-listening-ring::after {
     animation: none;
   }
+  .pd-skeleton {
+    animation: none;
+  }
 }
 
 /* ============================================
@@ -434,4 +437,21 @@ html.dark .parent-dashboard {
   border-radius: 50%;
   background: rgba(6, 182, 212, 0.4);
   animation: listeningRing 1.4s ease-out infinite;
+}
+
+/* ── Parent dashboard: skeleton loader ── */
+@keyframes skeletonShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.pd-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--pd-surface-soft) 25%,
+    var(--pd-surface-overlay) 50%,
+    var(--pd-surface-soft) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
 }
