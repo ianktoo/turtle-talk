@@ -1,6 +1,7 @@
 /**
  * GET /api/parent/children — list children linked to the current parent.
  * POST /api/parent/children — add a child (body: { firstName, emoji }).
+ * DELETE /api/parent/children — unlink a child from current parent (body: { childId }).
  * Requires auth (parent or admin).
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -134,4 +135,36 @@ export async function POST(request: NextRequest) {
       completedMissions: 0,
     },
   });
+}
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let body: { childId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const childId = typeof body.childId === 'string' ? body.childId.trim() : '';
+  if (!childId) {
+    return NextResponse.json({ error: 'childId is required' }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from('parent_child')
+    .delete()
+    .eq('parent_id', user.id)
+    .eq('child_id', childId);
+
+  if (error) {
+    console.error('[parent/children] DELETE', error);
+    return NextResponse.json({ error: 'Failed to remove child' }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

@@ -32,17 +32,13 @@ export interface UserFacingSummary {
   suggestRetry: boolean;
 }
 
+/** Fewer, friendlier messages: mic and provider limit stay specific; everything else uses generic. */
 const USER_FACING = {
-  mic: "Couldn't access the microphone. Please check permissions and try again.",
-  stt: "Shelly couldn't hear that clearly. Try again?",
-  guardrail: "Let's talk about something else. What would you like to try?",
-  chat: "Shelly needs a short break — try again in a moment.",
-  tts: "Something went wrong with my voice. Try again in a moment.",
-  network: "Something went wrong. Please try again in a moment.",
-  /** Shown when a provider (e.g. ElevenLabs, OpenAI) returns "unusual activity" / abuse detection. */
-  providerLimit:
-    "Voice service is temporarily limited. Try again in a few minutes, or switch voice in settings.",
-  default: "Shelly had a little hiccup. Please try again in a moment.",
+  mic: "Couldn't access the microphone. Check permissions and try again.",
+  /** Abuse / rate limit from provider (ElevenLabs, OpenAI, etc.) */
+  providerLimit: "Voice is busy right now. Try again in a few minutes.",
+  /** Single generic message for all other failures (network, STT, TTS, chat, guardrail, etc.) */
+  default: "Something went wrong. Try again.",
 } as const;
 
 /**

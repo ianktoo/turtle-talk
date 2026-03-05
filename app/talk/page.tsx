@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, MicOff, PhoneOff } from 'lucide-react';
 import { useMicPermission } from '@/app/hooks/useMicPermission';
 import { useVoiceSession } from '@/app/hooks/useVoiceSession';
 import { useMissions } from '@/app/hooks/useMissions';
@@ -14,10 +13,13 @@ import TurtleCharacter from '@/app/components/talk/TurtleCharacter';
 import MicPermission from '@/app/components/talk/MicPermission';
 import MissionSelectView from '@/app/components/talk/MissionSelectView';
 import ConversationSubtitles from '@/app/components/talk/ConversationSubtitles';
+import ConversationBubblesCard from '@/app/components/talk/ConversationBubblesCard';
+import TalkBottomBar from '@/app/components/talk/TalkBottomBar';
 import type { MissionSuggestion } from '@/lib/speech/types';
 
 const STATE_LABELS: Record<string, string> = {
   idle:       'Getting ready...',
+  connecting: 'Connecting to Shelly...',
   listening:  'Shelly is listening 👂',
   recording:  'I hear you! 🎤',
   processing: 'Shelly is thinking... 🐢',
@@ -48,14 +50,14 @@ function ConversationView() {
   // The child's first active mission, if any — passed to the agent for coaching
   const activeMission = activeMissions[0] ?? null;
 
-  // Stable provider instance — one per mount (native = /api/talk; vapi = Vapi WebRTC)
+  // Stable provider instance — one per mount (default: LiveKit room + agent)
   const providerRef = useRef<ReturnType<typeof createVoiceProvider> | null>(null);
   if (!providerRef.current) providerRef.current = createVoiceProvider();
 
   const { state, mood, messages, pendingUserTranscript, isMuted, error, toggleMute, endConversation, startListening } =
     useVoiceSession(providerRef.current, {
-      // If missions are pending, don't navigate immediately — MissionSelectView handles it
-      onEnd: () => { if (!pendingChoicesRef.current) router.push('/missions'); },
+      // Stay on /talk when call ends; post-call bar shows Continue / My Missions / Home
+      onEnd: () => {},
       onMissionChoices: setPendingMissionChoices,
       initialMessages: savedMessages,
       childName,
@@ -67,10 +69,8 @@ function ConversationView() {
       activeMission,
     });
 
-  useEffect(() => {
-    startListening();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Do not auto-start: AudioContext must be created/resumed after a user gesture (Chrome autoplay policy).
+  // Start only when the user taps "Start" / "Talk to Shelly" so the gesture unblocks audio.
 
   if (pendingMissionChoices) {
     return (
@@ -89,6 +89,8 @@ function ConversationView() {
     );
   }
 
+  const callEnded = state === 'ended';
+
   return (
     <main
       style={{
@@ -99,14 +101,14 @@ function ConversationView() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 64,
-        paddingBottom: 40,
+        paddingTop: 48,
+        paddingBottom: 100,
         paddingLeft: 20,
         paddingRight: 20,
-        gap: 24,
+        gap: 16,
       }}
     >
-      {/* ── Top bar: just mute icon (left) + TurtleTalk title ── */}
+      {/* ── Top bar: TurtleTalk title (centered) ── */}
       <div
         style={{
           position: 'absolute',
@@ -115,34 +117,11 @@ function ConversationView() {
           right: 0,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           padding: '14px 20px',
           zIndex: 20,
         }}
       >
-        {/* Mute — small, unobtrusive */}
-        <button
-          onClick={toggleMute}
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            border: '1px solid rgba(255,255,255,0.22)',
-            background: isMuted ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.1)',
-            color: 'white',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          {isMuted
-            ? <MicOff size={18} strokeWidth={2} color="#fbbf24" />
-            : <Mic    size={18} strokeWidth={2} color="white"   />}
-        </button>
-
         <span
           style={{
             color: 'rgba(255,255,255,0.7)',
@@ -153,113 +132,81 @@ function ConversationView() {
         >
           TurtleTalk
         </span>
-
-        {/* Spacer to keep title centred */}
-        <div style={{ width: 40 }} />
       </div>
 
-      {/* ── Turtle (reactions disabled: was mood={mood}) ── */}
-      <TurtleCharacter mood="idle" size={220} />
+      {/* ── Turtle (moved up) ── */}
+      <TurtleCharacter mood="idle" size={200} />
 
-      {/* ── Status label ── */}
-      <p
-        style={{
-          color: 'rgba(255,255,255,0.65)',
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          margin: 0,
-          textAlign: 'center',
-          minHeight: 22,
-        }}
-      >
-        {STATE_LABELS[state] ?? ''}
-      </p>
+      {/* ── Conversation card: last 3 bubbles, show/hide toggle ── */}
+      <div style={{ width: '100%', maxWidth: 440 }}>
+        <ConversationBubblesCard messages={messages} pendingUserTranscript={pendingUserTranscript} />
+      </div>
 
-      {/* ── Localhost + Vapi: LLM unreachable so Shelly won't respond ── */}
-      {state === 'listening' &&
-        typeof window !== 'undefined' &&
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-        providerRef.current?.name === 'vapi' && (
+      {/* ── When idle: Start button; when connecting: same button with "Connecting..." and disabled; otherwise status label ── */}
+      {state === 'idle' || state === 'connecting' ? (
+        <button
+          type="button"
+          onClick={() => state === 'idle' && startListening()}
+          disabled={state === 'connecting'}
+          style={{
+            padding: '12px 28px',
+            borderRadius: 9999,
+            border: '2px solid rgba(255,255,255,0.3)',
+            background: state === 'connecting'
+              ? 'linear-gradient(135deg, #15803d, #16a34a)'
+              : 'linear-gradient(135deg, #16a34a, #22c55e)',
+            color: 'white',
+            fontSize: '1rem',
+            fontWeight: 700,
+            cursor: state === 'connecting' ? 'wait' : 'pointer',
+            boxShadow: '0 4px 20px rgba(22,163,74,0.4)',
+            opacity: state === 'connecting' ? 0.9 : 1,
+          }}
+          aria-label={state === 'connecting' ? 'Connecting to Shelly' : 'Start conversation with Shelly'}
+        >
+          {state === 'connecting' ? 'Connecting…' : 'Talk to Shelly'}
+        </button>
+      ) : (
         <p
           style={{
-            color: 'rgba(255,255,255,0.85)',
-            fontSize: '0.8rem',
+            color: 'rgba(255,255,255,0.65)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
             margin: 0,
             textAlign: 'center',
-            maxWidth: 320,
-            lineHeight: 1.4,
+            minHeight: 22,
           }}
         >
-          On localhost, Shelly can&apos;t respond unless your app is exposed. Set{' '}
-          <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: 4 }}>NEXT_PUBLIC_CUSTOM_LLM_URL</code> to a public URL (e.g. Cloudflare Tunnel or localtunnel) and restart. Or test voice on your live site (e.g. turtletalk.io).
+          {STATE_LABELS[state] ?? ''}
         </p>
       )}
 
-      {/* ── Subtitles or error ── */}
-      {error ? (
-        <div
+      {/* ── Subtitles; when error, show one short line and Try again is in the bottom bar ── */}
+      <ConversationSubtitles messages={messages} state={state} pendingUserTranscript={pendingUserTranscript} />
+      {error && (
+        <p
           style={{
-            width: '100%',
-            maxWidth: 440,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 10,
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: '0.9rem',
+            margin: 0,
             textAlign: 'center',
+            maxWidth: 360,
           }}
         >
-          <span style={{ fontSize: 36 }}>🐢</span>
-          <p style={{ color: 'white', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-            Oops! Shelly had a little hiccup.
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0, wordBreak: 'break-word' }}>
-            {getUserFacingMessage(error)}
-          </p>
-          <button
-            onClick={() => startListening()}
-            style={{
-              marginTop: 4,
-              padding: '10px 28px',
-              borderRadius: 999,
-              border: '1px solid rgba(255,255,255,0.3)',
-              background: 'rgba(255,255,255,0.15)',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Try again 🌊
-          </button>
-        </div>
-      ) : (
-        <ConversationSubtitles messages={messages} state={state} pendingUserTranscript={pendingUserTranscript} />
+          {getUserFacingMessage(error)}
+        </p>
       )}
 
-      {/* ── End call — the only prominent control ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 8 }}>
-        <button
-          onClick={endConversation}
-          aria-label="End call"
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #dc2626, #ef4444)',
-            boxShadow: '0 6px 24px rgba(220,38,38,0.5)',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <PhoneOff size={30} color="white" strokeWidth={2} />
-        </button>
-        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 600 }}>
-          End call
-        </span>
-      </div>
+      {/* ── Contextual bottom bar: Mute, Try again (when error), End call (in-call) or post-call actions (Continue, My Missions, Home) ── */}
+      <TalkBottomBar
+        callEnded={callEnded}
+        onEndCall={endConversation}
+        onContinueConversation={startListening}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
+        hasError={!!error}
+        onTryAgain={error ? startListening : undefined}
+      />
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomConfiguration, RoomAgentDispatch } from 'livekit-server-sdk';
 
 /**
  * POST /api/livekit/token
@@ -41,6 +41,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ttl: '1h',
     });
     at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
+    // Agent uses agentName: 'shelly', which turns off automatic dispatch. Request dispatch on join so the agent joins this room.
+    at.roomConfig = new RoomConfiguration({
+      agents: [new RoomAgentDispatch({ agentName: 'shelly' })],
+    });
     const token = await at.toJwt();
 
     const livekitUrl = process.env.LIVEKIT_URL ?? '';

@@ -1,31 +1,31 @@
 /**
  * Turtle Talk LiveKit voice agent.
- * Uses Gemini Live API (realtime) for speech-in and speech-out — one Gemini model for voice.
+ * Uses OpenAI Realtime API for speech-in and speech-out.
  * Run: pnpm dev (connects to LiveKit Cloud), or deploy with lk agent create.
  */
 import { type JobContext, ServerOptions, cli, defineAgent, voice } from '@livekit/agents';
-import * as google from '@livekit/agents-plugin-google';
+import * as openai from '@livekit/agents-plugin-openai';
 import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { ShellyAgent } from './agent.js';
 
-dotenv.config({ path: '.env.local' });
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '.env.local') });
+dotenv.config({ path: join(__dirname, '..', '.env.local') });
 
-const SHELLY_INSTRUCTIONS = `You are Shelly, a friendly sea turtle who chats with children aged 4-10.
-Focus on the child's feelings and what they did today. Keep every response to 1 sentence + 1 question.
-Use tiny words. Short sentences. Lots of warmth. Always speak in English only.`;
+function sendTranscript(room: { localParticipant?: { publishData(data: Uint8Array, opts: { reliable?: boolean }): Promise<void> } }, role: 'user' | 'assistant', text: string): void {
+  const payload = new TextEncoder().encode(JSON.stringify({ type: 'transcript', role, text }));
+  room.localParticipant?.publishData(payload, { reliable: true }).catch(() => {});
+}
 
 export default defineAgent({
   entry: async (ctx: JobContext) => {
     const session = new voice.AgentSession({
-      llm: new google.beta.realtime.RealtimeModel({
-        voice: 'Puck',
-        instructions: SHELLY_INSTRUCTIONS,
+      llm: new openai.realtime.RealtimeModel({
+        voice: 'coral',
       }),
-      inputOptions: {
-        noiseCancellation: BackgroundVoiceCancellation(),
-      },
     });
 
     await session.start({
@@ -37,6 +37,21 @@ export default defineAgent({
     });
 
     await ctx.connect();
+
+    const room = ctx.room;
+    session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (ev) => {
+      if (ev.isFinal && ev.transcript.trim()) {
+        sendTranscript(room, 'user', ev.transcript);
+      }
+    });
+    session.on(voice.AgentSessionEventTypes.ConversationItemAdded, (ev) => {
+      if (ev.item.role === 'assistant') {
+        const text = (ev.item as { textContent?: string }).textContent;
+        if (text?.trim()) {
+          sendTranscript(room, 'assistant', text);
+        }
+      }
+    });
 
     const handle = session.generateReply({
       instructions:
@@ -50,5 +65,7 @@ cli.runApp(
   new ServerOptions({
     agent: fileURLToPath(import.meta.url),
     agentName: 'shelly',
+    // Give the job process more time to start (default 10s can be too short on Windows / cold start for 2nd+ jobs)
+    initializeProcessTimeout: 60 * 1000,
   })
 );

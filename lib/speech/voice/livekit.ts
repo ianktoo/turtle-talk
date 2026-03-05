@@ -2,14 +2,15 @@
 
 import { Room, RoomEvent, Track } from 'livekit-client';
 import type { VoiceSessionOptions } from './types';
+import type { Message } from '../types';
 import { BaseVoiceProvider } from './base';
 
 /**
  * LiveKitVoiceProvider
  *
  * Connects to a LiveKit room with a token from /api/livekit/token. The room is
- * joined by a LiveKit agent (see livekit-agent/) that runs the pipeline:
- * Google Cloud STT (Chirp) → Gemini LLM → Gemini TTS.
+ * joined by a LiveKit agent (see livekit-agent/) that runs the voice pipeline
+ * (e.g. OpenAI Realtime or STT-LLM-TTS) and publishes audio back to the room.
  */
 export class LiveKitVoiceProvider extends BaseVoiceProvider {
   readonly name = 'livekit';
@@ -18,10 +19,16 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
   private _generation = 0;
   private _muted = false;
   private audioEl: HTMLAudioElement | null = null;
+  /** Timeout: emit error if agent never publishes audio. */
+  private _agentJoinTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  /** Conversation messages (user + assistant) when agent sends transcript data. */
+  private _messages: Message[] = [];
 
   async start(options: VoiceSessionOptions): Promise<void> {
     const gen = ++this._generation;
-    this.emit('stateChange', 'listening');
+    this._messages = options.initialMessages ? [...options.initialMessages] : [];
+    if (this._messages.length > 0) this.emit('messages', this._messages);
+    this.emit('stateChange', 'connecting');
     this.emit('moodChange', 'listening');
 
     try {
@@ -49,8 +56,12 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
         publishDefaults: { simulcast: false },
       });
 
-      room.on(RoomEvent.Disconnected, () => {
+      room.on(RoomEvent.Disconnected, (reason) => {
         if (this._generation !== gen) return;
+        if (this._agentJoinTimeoutId) {
+          clearTimeout(this._agentJoinTimeoutId);
+          this._agentJoinTimeoutId = null;
+        }
         this.room = null;
         this.audioEl = null;
         this.emit('stateChange', 'idle');
@@ -62,24 +73,53 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
         if (this._generation !== gen) return;
         try {
           const text = new TextDecoder().decode(payload);
-          const parsed = JSON.parse(text) as { type?: string; text?: string };
+          const parsed = JSON.parse(text) as {
+            type?: string;
+            text?: string;
+            role?: 'user' | 'assistant';
+          };
           if (parsed.type === 'transcript' && typeof parsed.text === 'string') {
+            const role = parsed.role === 'assistant' ? 'assistant' : 'user';
             this.emit('userTranscript', parsed.text);
+            this._messages = [...this._messages, { role, content: parsed.text }];
+            this.emit('messages', this._messages);
           }
         } catch {
           // ignore non-JSON or other data
         }
       });
 
-      room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+      room.on(RoomEvent.TrackSubscribed, (track, _pub, _participant) => {
         if (this._generation !== gen || track.kind !== Track.Kind.Audio) return;
-        // In a voice-agent room, the only remote audio is the agent
-        this.emit('stateChange', 'speaking');
-        this.emit('moodChange', 'talking');
+        if (this._agentJoinTimeoutId) {
+          clearTimeout(this._agentJoinTimeoutId);
+          this._agentJoinTimeoutId = null;
+        }
+        const hadExistingEl = !!this.audioEl;
+        if (hadExistingEl && this.audioEl?.parentNode) {
+          this.audioEl.remove();
+          this.audioEl = null;
+        }
         const el = track.attach();
         this.audioEl = el;
         el.autoplay = true;
         document.body.appendChild(el);
+        const mediaEl = el as HTMLMediaElement;
+
+        const setSpeaking = (speaking: boolean) => {
+          if (this._generation !== gen) return;
+          this.emit('stateChange', speaking ? 'speaking' : 'listening');
+          this.emit('moodChange', speaking ? 'talking' : 'listening');
+        };
+
+        mediaEl.addEventListener('playing', () => setSpeaking(true));
+        mediaEl.addEventListener('pause', () => setSpeaking(false));
+        mediaEl.addEventListener('ended', () => setSpeaking(false));
+
+        const playPromise = mediaEl.play?.();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
       });
 
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
@@ -101,9 +141,17 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
       }
 
       this.room = room;
+      this.emit('stateChange', 'listening');
 
       await room.localParticipant.setMicrophoneEnabled(true);
       if (this._muted) await room.localParticipant.setMicrophoneEnabled(false);
+
+      this._agentJoinTimeoutId = setTimeout(() => {
+        this._agentJoinTimeoutId = null;
+        if (this._generation === gen && this.room && !this.audioEl) {
+          this.emit('error', "Shelly couldn't join the room. Is the agent running on your server?");
+        }
+      }, 15000);
     } catch (err) {
       if (this._generation !== gen) return;
       const msg = err instanceof Error ? err.message : 'Failed to connect to LiveKit';
@@ -115,6 +163,10 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
 
   stop(): void {
     this._generation++;
+    if (this._agentJoinTimeoutId) {
+      clearTimeout(this._agentJoinTimeoutId);
+      this._agentJoinTimeoutId = null;
+    }
     if (this.audioEl?.parentNode) this.audioEl.remove();
     this.audioEl = null;
     this.room?.disconnect();
@@ -127,6 +179,13 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
     this._muted = muted;
     if (this.room) {
       void this.room.localParticipant.setMicrophoneEnabled(!muted);
+    }
+    if (muted) {
+      this.emit('stateChange', 'muted');
+      this.emit('moodChange', 'idle');
+    } else {
+      this.emit('stateChange', 'listening');
+      this.emit('moodChange', 'listening');
     }
   }
 }

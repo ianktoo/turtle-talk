@@ -54,7 +54,7 @@ export default function WorldPage() {
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.3)',
               background: 'rgba(255,255,255,0.12)',
-              color: 'white',
+              color: 'var(--tt-text-primary)',
               fontSize: '0.95rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -68,7 +68,7 @@ export default function WorldPage() {
         </Link>
         <h1
           style={{
-            color: 'white',
+            color: 'var(--tt-text-primary)',
             fontSize: '1.6rem',
             fontWeight: 900,
             textShadow: '0 2px 8px rgba(0,0,0,0.4)',
@@ -82,7 +82,7 @@ export default function WorldPage() {
       {completedMissions.length === 0 ? (
         <p
           style={{
-            color: 'rgba(255,255,255,0.8)',
+            color: 'var(--tt-text-secondary)',
             fontSize: '1.05rem',
             textAlign: 'center',
             marginTop: 60,
@@ -145,7 +145,7 @@ export default function WorldPage() {
               border: '1px solid rgba(255,255,255,0.3)',
               background: 'rgba(10,30,60,0.85)',
               backdropFilter: 'blur(12px)',
-              color: 'white',
+              color: 'var(--tt-text-primary)',
               cursor: 'pointer',
               zIndex: 20,
             }}

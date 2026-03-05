@@ -50,7 +50,7 @@ function MissionCard({
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
-            color: 'white',
+            color: 'var(--tt-text-primary)',
             fontWeight: 700,
             fontSize: 17,
             margin: 0,
@@ -61,7 +61,7 @@ function MissionCard({
         </p>
         <p
           style={{
-            color: 'rgba(255,255,255,0.85)',
+            color: 'var(--tt-text-secondary)',
             fontSize: 14,
             margin: '4px 0 0',
             textShadow: '0 1px 3px rgba(0,0,0,0.3)',
@@ -70,12 +70,12 @@ function MissionCard({
           {mission.description}
         </p>
         {!isActive && mission.completedAt && (
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, margin: '6px 0 0' }}>
+          <p style={{ color: 'var(--tt-text-muted)', fontSize: 12, margin: '6px 0 0' }}>
             Completed {formatDate(mission.completedAt)}
           </p>
         )}
         {isActive && (
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, margin: '6px 0 0' }}>
+          <p style={{ color: 'var(--tt-text-muted)', fontSize: 11, margin: '6px 0 0' }}>
             Started {formatDate(mission.createdAt)}
           </p>
         )}
@@ -107,7 +107,7 @@ function MissionCard({
             onClick={() => onDelete(mission.id)}
             style={{
               background: 'rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'var(--tt-text-tertiary)',
               border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: 10,
               padding: '6px 12px',
@@ -139,7 +139,7 @@ function EmptyState({ tab }: { tab: 'active' | 'completed' }) {
       <span style={{ fontSize: 64 }}>{tab === 'active' ? '🌊' : '🏆'}</span>
       <p
         style={{
-          color: 'rgba(255,255,255,0.85)',
+          color: 'var(--tt-text-secondary)',
           fontSize: 17,
           fontWeight: 600,
           textShadow: '0 1px 4px rgba(0,0,0,0.4)',
@@ -150,7 +150,7 @@ function EmptyState({ tab }: { tab: 'active' | 'completed' }) {
       </p>
       <p
         style={{
-          color: 'rgba(255,255,255,0.55)',
+          color: 'var(--tt-text-muted)',
           fontSize: 14,
           margin: 0,
           maxWidth: 280,
@@ -200,7 +200,7 @@ export default function MissionsPage() {
             background: 'rgba(255,255,255,0.15)',
             border: '1px solid rgba(255,255,255,0.25)',
             borderRadius: 12,
-            color: 'white',
+            color: 'var(--tt-text-primary)',
             padding: '8px 16px',
             fontSize: 14,
             fontWeight: 600,
@@ -215,7 +215,7 @@ export default function MissionsPage() {
         </button>
         <h1
           style={{
-            color: 'white',
+            color: 'var(--tt-text-primary)',
             fontSize: 26,
             fontWeight: 800,
             textShadow: '0 2px 8px rgba(0,0,0,0.4)',
@@ -252,7 +252,7 @@ export default function MissionsPage() {
                 background: tab === t ? 'rgba(255,255,255,0.2)' : 'transparent',
                 border: 'none',
                 borderRadius: 10,
-                color: tab === t ? 'white' : 'rgba(255,255,255,0.55)',
+                color: tab === t ? 'var(--tt-text-primary)' : 'var(--tt-text-muted)',
                 padding: '10px 24px',
                 fontSize: 15,
                 fontWeight: tab === t ? 700 : 500,
@@ -271,7 +271,7 @@ export default function MissionsPage() {
                     padding: '1px 8px',
                     fontSize: 12,
                     fontWeight: 700,
-                    color: 'white',
+                    color: 'var(--tt-text-primary)',
                   }}
                 >
                   {count}
@@ -314,7 +314,7 @@ export default function MissionsPage() {
           background: 'rgba(255,255,255,0.18)',
           border: '1px solid rgba(255,255,255,0.3)',
           borderRadius: 16,
-          color: 'white',
+          color: 'var(--tt-text-primary)',
           padding: '14px 32px',
           fontSize: 16,
           fontWeight: 700,

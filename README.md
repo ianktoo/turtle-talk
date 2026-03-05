@@ -23,7 +23,9 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Database (Supabase)
 
-If you set `NEXT_PUBLIC_DB_PROVIDER=supabase`, run the migrations in your Supabase project or the app will get 404s on `/rest/v1/missions`. In the [Supabase Dashboard](https://supabase.com/dashboard) → SQL Editor, run the contents of `supabase/migrations/001_initial.sql` and `supabase/migrations/002_indexes.sql`. Otherwise use the default `localStorage` provider (no setup).
+**Two data paths:** `NEXT_PUBLIC_DB_PROVIDER` (localStorage / supabase / convex) controls only **missions** and **child memory** (Talk, Missions, World). The **parent dashboard** (/parent) always uses Supabase: children list, weekly reports, dinner questions, and auth. So switching to `localStorage` does not change parent behaviour — you still need Supabase configured for /parent and /login. Parent mission counts and weekly reports read from the Supabase `missions` table; if you use `localStorage` for the app, those counts may be zero or stale.
+
+If you set `NEXT_PUBLIC_DB_PROVIDER=supabase`, run the migrations in your Supabase project or the app will get 404s on `/rest/v1/missions`. In the [Supabase Dashboard](https://supabase.com/dashboard) → SQL Editor, run the contents of `supabase/migrations/001_initial.sql`, `002_indexes.sql`, `003_profiles_children_waiting_list.sql`, and **`006_fix_profiles_rls_recursion.sql`** (fixes "infinite recursion detected in policy for relation profiles" on /api/parent/children). Otherwise use the default `localStorage` provider (no setup).
 
 ## Voice and audio
 

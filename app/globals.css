@@ -17,6 +17,68 @@ body {
 }
 
 /* ============================================
+   HOME PAGE – HERO TOKENS (simple UI, mobile-first)
+   ============================================ */
+/* App-wide text hierarchy (on dark/ambient backgrounds): grey scale */
+:root {
+  --tt-text-primary: #ffffff;
+  --tt-text-secondary: rgba(255, 255, 255, 0.88);
+  --tt-text-tertiary: rgba(255, 255, 255, 0.7);
+  --tt-text-muted: rgba(255, 255, 255, 0.5);
+}
+
+:root {
+  --hero-title-size: clamp(2.4rem, 8vw, 4rem);
+  --hero-title-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  --hero-subtitle-size: clamp(1rem, 3.5vw, 1.25rem);
+  --hero-gap: 1rem;
+  --hero-spacing-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+}
+
+.messages-pill:hover {
+  opacity: 0.9;
+}
+.messages-pill:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Small screens: icon-only side nav labels, version badge above nav */
+@media (max-width: 420px) {
+  .nav-item-label {
+    display: none;
+  }
+  .version-badge {
+    bottom: 72px;
+  }
+  .bottom-nav {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* Talk screen post-call bar: on small screens show icon-only for My Missions / Home */
+@media (max-width: 420px) {
+  .talk-bar-secondary-label {
+    display: none;
+  }
+  .talk-bar-secondary {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .talk-bottom-bar-post-call {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+/* Larger screens: keep post-call actions on one line */
+@media (min-width: 421px) {
+  .talk-bottom-bar-actions {
+    flex-wrap: nowrap;
+  }
+}
+
+/* ============================================
    HOME PAGE – DAY / NIGHT SCENE ANIMATIONS
    Cycle duration: 24s
    0–35%   : Day

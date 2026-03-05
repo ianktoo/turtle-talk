@@ -57,3 +57,4 @@
 {"sessionId":"83bf97","location":"useVoiceSession.ts:endConversation","message":"End call clicked","data":{"providerName":"gemini-live"},"timestamp":1772438024411,"hypothesisId":"H1"}
 {"sessionId":"83bf97","location":"useVoiceSession.ts:endConversation","message":"End call clicked","data":{"providerName":"gemini-live"},"timestamp":1772438055070,"hypothesisId":"H1"}
 {"sessionId":"83bf97","location":"useVoiceSession.ts:endConversation","message":"End call clicked","data":{"providerName":"gemini-live"},"timestamp":1772446679843,"hypothesisId":"H1"}
+{"sessionId":"83bf97","location":"useVoiceSession.ts:endConversation","message":"End call clicked","data":{"providerName":"gemini-live"},"timestamp":1772475374792,"hypothesisId":"H1"}

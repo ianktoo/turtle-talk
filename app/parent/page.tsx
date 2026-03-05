@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChildSwitcher } from '@/app/components/parent/ChildSwitcher';
+import { ParentHeader } from '@/app/components/parent/ParentHeader';
 import { WeeklySummary } from '@/app/components/parent/WeeklySummary';
 import { DinnerQuestions } from '@/app/components/parent/DinnerQuestions';
 import { BookCard } from '@/app/components/parent/BookCard';
@@ -28,24 +28,17 @@ function getWeekOptions(): { value: string; label: string }[] {
   return options;
 }
 
-const EMOJI_OPTIONS = ['🐢', '🦊', '🦋', '🐻', '🦁', '🐸', '🐶', '🐱', '🌟'];
-
 export default function ParentPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [activeChild, setActiveChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
-  const [addChildOpen, setAddChildOpen] = useState(false);
-  const [addFirstName, setAddFirstName] = useState('');
-  const [addEmoji, setAddEmoji] = useState('🐢');
-  const [addSubmitting, setAddSubmitting] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
-  const [newChildLoginKey, setNewChildLoginKey] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [weeklyReport, setWeeklyReport] = useState<WeeklySummaryData | null>(null);
   const [weeklyReportLoading, setWeeklyReportLoading] = useState(false);
   const [dinnerQuestions, setDinnerQuestions] = useState<DinnerQuestion[]>([]);
   const [dinnerQuestionsLoading, setDinnerQuestionsLoading] = useState(false);
   const [dinnerQuestionsGenerating, setDinnerQuestionsGenerating] = useState(false);
+  const [childrenModalOpen, setChildrenModalOpen] = useState(false);
 
   const fetchChildren = useCallback(async () => {
     try {
@@ -108,37 +101,6 @@ export default function ParentPage() {
     fetchDinnerQuestions();
   }, [fetchDinnerQuestions]);
 
-  async function handleAddChild(e: React.FormEvent) {
-    e.preventDefault();
-    setAddError(null);
-    const name = addFirstName.trim();
-    if (!name) {
-      setAddError('Please enter a name');
-      return;
-    }
-    setAddSubmitting(true);
-    try {
-      const res = await fetch('/api/parent/children', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ firstName: name, emoji: addEmoji }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAddError(data.error || 'Could not add child');
-        return;
-      }
-      setNewChildLoginKey(data.child?.loginKey ?? null);
-      setAddFirstName('');
-      setAddEmoji('🐢');
-      await fetchChildren();
-      setAddChildOpen(false);
-    } finally {
-      setAddSubmitting(false);
-    }
-  }
-
   const weeklySummary = weeklyReport ?? undefined;
   const practicedAreaIds = weeklySummary?.areas?.map((a: { id: string }) => a.id) ?? [];
 
@@ -180,7 +142,7 @@ export default function ParentPage() {
     );
   }
 
-  if (children.length === 0 && !addChildOpen) {
+  if (children.length === 0) {
     return (
       <div
         style={{
@@ -189,32 +151,49 @@ export default function ParentPage() {
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
         }}
       >
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-          Add your first child
-        </h1>
-        <p style={{ color: '#6b7280', marginBottom: 24, textAlign: 'center' }}>
-          Create a profile so they can log in and use TurtleTalk.
-        </p>
-        <button
-          onClick={() => { setAddChildOpen(true); setNewChildLoginKey(null); setAddError(null); }}
+        <ParentHeader
+          children={[]}
+          activeChild={null}
+          onSelectChild={() => {}}
+          onChildrenChange={fetchChildren}
+          childrenModalOpen={childrenModalOpen}
+          onOpenChildrenModal={() => setChildrenModalOpen(true)}
+          onCloseChildrenModal={() => setChildrenModalOpen(false)}
+        />
+        <div
           style={{
-            padding: '14px 24px',
-            borderRadius: 12,
-            border: 'none',
-            background: '#0f766e',
-            color: 'white',
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: 'pointer',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
           }}
         >
-          Add child
-        </button>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
+            Add your first child
+          </h1>
+          <p style={{ color: '#6b7280', marginBottom: 24, textAlign: 'center' }}>
+            Create a profile so they can log in and use TurtleTalk.
+          </p>
+          <button
+            onClick={() => setChildrenModalOpen(true)}
+            style={{
+              padding: '14px 24px',
+              borderRadius: 12,
+              border: 'none',
+              background: '#0f766e',
+              color: 'white',
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Add child
+          </button>
+        </div>
       </div>
     );
   }
@@ -227,126 +206,15 @@ export default function ParentPage() {
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
-      <header
-        style={{
-          background: '#fff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '0 20px',
-          height: 60,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Parent Dashboard</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            onClick={() => { setAddChildOpen(true); setNewChildLoginKey(null); setAddError(null); }}
-            style={{
-              padding: '6px 12px',
-              fontSize: 13,
-              background: '#f3f4f6',
-              border: '1px solid #e5e7eb',
-              borderRadius: 8,
-              cursor: 'pointer',
-            }}
-          >
-            Add child
-          </button>
-          {activeChild && children.length > 0 && (
-            <ChildSwitcher
-              children={children}
-              activeChild={activeChild}
-              onSelect={setActiveChild}
-            />
-          )}
-        </div>
-      </header>
-
-      {addChildOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.4)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-          }}
-          onClick={() => !addSubmitting && setAddChildOpen(false)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 16,
-              padding: 24,
-              maxWidth: 360,
-              width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>Add child</h2>
-            <form onSubmit={handleAddChild} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 500 }}>First name</label>
-              <input
-                value={addFirstName}
-                onChange={(e) => setAddFirstName(e.target.value)}
-                placeholder="e.g. Alex"
-                style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e5e7eb' }}
-              />
-              <label style={{ fontSize: 14, fontWeight: 500 }}>Emoji</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {EMOJI_OPTIONS.map((em) => (
-                  <button
-                    key={em}
-                    type="button"
-                    onClick={() => setAddEmoji(em)}
-                    style={{
-                      fontSize: 24,
-                      padding: 8,
-                      border: addEmoji === em ? '2px solid #0f766e' : '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      background: addEmoji === em ? '#f0fdfa' : '#fff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {em}
-                  </button>
-                ))}
-              </div>
-              {addError && <p style={{ color: '#dc2626', fontSize: 14 }}>{addError}</p>}
-              {newChildLoginKey && (
-                <p style={{ background: '#f0fdf4', padding: 12, borderRadius: 8, fontSize: 13 }}>
-                  Login code for this child: <strong>{newChildLoginKey}</strong>. They’ll use this with their name and emoji to sign in.
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => setAddChildOpen(false)}
-                  disabled={addSubmitting}
-                  style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addSubmitting}
-                  style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#0f766e', color: 'white', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  {addSubmitting ? 'Adding…' : 'Add'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ParentHeader
+        children={children}
+        activeChild={activeChild}
+        onSelectChild={setActiveChild}
+        onChildrenChange={fetchChildren}
+        childrenModalOpen={childrenModalOpen}
+        onOpenChildrenModal={() => setChildrenModalOpen(true)}
+        onCloseChildrenModal={() => setChildrenModalOpen(false)}
+      />
 
       {activeChild && (
         <main

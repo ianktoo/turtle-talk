@@ -1,8 +1,14 @@
 /**
  * Database service factory.
  *
- * Set NEXT_PUBLIC_DB_PROVIDER to 'supabase' or 'convex'.
- * Defaults to 'localStorage' — no config needed in dev.
+ * NEXT_PUBLIC_DB_PROVIDER controls only missions and child memory (used by useMissions,
+ * usePersonalMemory — Talk, Missions, World). Values: 'localStorage' | 'supabase' | 'convex'.
+ * Defaults to 'localStorage'.
+ *
+ * The parent dashboard (/parent) does not use getDb(). It always uses Supabase via the API
+ * routes (parent_child, children, profiles, missions for counts, weekly_reports, dinner_questions).
+ * So switching to localStorage does not change parent behaviour; parent still requires Supabase
+ * and will show data from Supabase (e.g. mission counts from Supabase missions table).
  */
 import type { DatabaseService } from './types';
 

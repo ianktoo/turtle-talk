@@ -8,6 +8,8 @@ export interface Child {
   age: number;
   avatar: string;
   completedMissions: number;
+  /** 6-character login code for child device sign-in */
+  loginKey?: string;
 }
 
 interface Props {

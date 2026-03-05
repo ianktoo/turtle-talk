@@ -60,6 +60,8 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
     }
 
     this.audioCtx = new AudioContext();
+    // Resume so analyser gets real data; otherwise getByteFrequencyData returns zeros and VAD never triggers (stuck at listening).
+    await this.audioCtx.resume();
     const source = this.audioCtx.createMediaStreamSource(this.stream);
     this.analyser = this.audioCtx.createAnalyser();
     this.analyser.fftSize = 256;
@@ -304,7 +306,9 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
       const audioData = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const buffer = audioData.buffer.slice(audioData.byteOffset, audioData.byteOffset + audioData.byteLength);
       const playCtx = new AudioContext();
-      playCtx.decodeAudioData(buffer).then((decoded) => {
+      void playCtx.resume().then(() =>
+        playCtx.decodeAudioData(buffer)
+      ).then((decoded) => {
         const source = playCtx.createBufferSource();
         source.buffer = decoded;
         source.connect(playCtx.destination);

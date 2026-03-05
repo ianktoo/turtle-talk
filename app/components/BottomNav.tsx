@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Leaf, Star, Phone } from 'lucide-react';
+import { Leaf, Star, Mic } from 'lucide-react';
 
 const LEFT_ITEM  = { href: '/world',    icon: Leaf, label: 'My Garden',   color: '#06b6d4' };
 const RIGHT_ITEM = { href: '/missions', icon: Star, label: 'My Missions', color: '#f97316' };
@@ -11,26 +11,27 @@ function NavItem({ href, icon: Icon, label, color, active }: {
   href: string; icon: typeof Leaf; label: string; color: string; active: boolean;
 }) {
   return (
-    <Link href={href} style={{ textDecoration: 'none', flex: 1 }}>
-      {/* Explicit min-height so the touch target is generous for small fingers */}
+    <Link href={href} aria-label={label} style={{ textDecoration: 'none', flex: 1, display: 'flex', justifyContent: 'center' }}>
       <div
         style={{
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 5,
-          minHeight: 56,
+          gap: 6,
+          minHeight: 44,
+          padding: '8px 12px',
           opacity: active ? 1 : 0.6,
           transition: 'opacity 0.15s',
         }}
       >
-        <Icon size={28} color={active ? color : 'white'} strokeWidth={active ? 2.5 : 1.75} />
+        <Icon size={22} color={active ? color : 'var(--tt-text-primary)'} strokeWidth={active ? 2.5 : 1.75} aria-hidden />
         <span
+          className="nav-item-label"
           style={{
-            fontSize: '0.78rem',
+            fontSize: '0.85rem',
             fontWeight: 700,
-            color: active ? color : 'rgba(255,255,255,0.8)',
+            color: active ? color : 'var(--tt-text-secondary)',
             letterSpacing: '0.01em',
             whiteSpace: 'nowrap',
           }}
@@ -47,49 +48,67 @@ export default function BottomNav() {
 
   return (
     <nav
+      className="bottom-nav"
       style={{
         position: 'fixed',
-        bottom: 16,
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
         width: 'calc(100% - 24px)',
         maxWidth: 500,
         zIndex: 50,
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px 20px 14px',
+        padding: '16px 20px max(14px, env(safe-area-inset-bottom))',
         borderRadius: 32,
         background: 'rgba(8, 22, 48, 0.88)',
         backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.16)',
+        border: '1px solid rgba(255,255,255,0.12)',
         boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
       }}
     >
       <NavItem {...LEFT_ITEM}  active={pathname === LEFT_ITEM.href}  />
 
-      {/* Centre call button — protrudes above the bar */}
+      {/* Centre pill — Talk to Shelly (voice chat, not a call) */}
       <Link
         href="/talk"
-        style={{ textDecoration: 'none', flex: 1, display: 'flex', justifyContent: 'center' }}
+        style={{
+          textDecoration: 'none',
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
       >
         <div
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-            boxShadow: '0 6px 28px rgba(22,163,74,0.65)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginTop: -44,   // protrudes well above the bar
-            border: '4px solid rgba(255,255,255,0.22)',
-            animation: 'btnPulse 3s ease-in-out infinite',
+            gap: 8,
+            minHeight: 44,
+            padding: '10px 20px',
+            borderRadius: 9999,
+            background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+            boxShadow: '0 4px 20px rgba(22,163,74,0.5)',
+            border: '2px solid rgba(255,255,255,0.25)',
             flexShrink: 0,
+            transition: 'transform 0.15s, opacity 0.15s',
           }}
+          className="active:scale-[0.98] active:opacity-90"
         >
-          <Phone size={34} color="white" strokeWidth={2} />
+          <Mic size={22} color="white" strokeWidth={2} />
+          <span
+            style={{
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              color: 'var(--tt-text-primary)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Talk to Shelly
+          </span>
         </div>
       </Link>
 

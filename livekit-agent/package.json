@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@livekit/agents": "^1.0.0",
-    "@livekit/agents-plugin-google": "^1.x",
+    "@livekit/agents-plugin-openai": "^1.x",
     "@livekit/noise-cancellation-node": "^0.x",
     "dotenv": "^16.4.5"
   },
