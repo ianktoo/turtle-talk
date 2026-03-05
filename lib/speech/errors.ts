@@ -39,6 +39,11 @@ const USER_FACING = {
   providerLimit: "Voice is busy right now. Try again in a few minutes.",
   /** Single generic message for all other failures (network, STT, TTS, chat, guardrail, etc.) */
   default: "Something went wrong. Try again.",
+  stt: "Something went wrong. Try again.",
+  tts: "Something went wrong. Try again.",
+  chat: "Something went wrong. Try again.",
+  guardrail: "Something went wrong. Try again.",
+  network: "Something went wrong. Try again.",
 } as const;
 
 /**
