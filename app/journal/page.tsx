@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, Square, Play, Save } from 'lucide-react';
 import { useChildSession } from '@/app/hooks/useChildSession';
@@ -21,6 +21,12 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+function formatDuration(secs: number): string {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
 export default function JournalPage() {
   const router = useRouter();
   const { child } = useChildSession();
@@ -31,6 +37,18 @@ export default function JournalPage() {
   const [state, setState] = useState<'idle' | 'recording' | 'recorded'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  useEffect(() => {
+    if (state !== 'recording') {
+      setRecordingSeconds(0);
+      return;
+    }
+    const id = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [state]);
+
   const recordedBlobRef = useRef<Blob | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -90,7 +108,8 @@ export default function JournalPage() {
     try {
       const base64 = await blobToBase64(recordedBlobRef.current);
       await db.addJournal(childId, base64);
-      router.push('/journals');
+      setSaveSuccess(true);
+      setTimeout(() => router.push('/journals'), 550);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save.');
       setSaving(false);
@@ -164,6 +183,7 @@ export default function JournalPage() {
         {state === 'idle' && canJournal && (
           <button
             type="button"
+            className="tt-tap-shake"
             onClick={startRecording}
             style={{
               display: 'inline-flex',
@@ -186,74 +206,109 @@ export default function JournalPage() {
         )}
 
         {state === 'recording' && (
-          <button
-            type="button"
-            onClick={stopRecording}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              padding: '16px 32px',
-              fontSize: 18,
-              fontWeight: 700,
-              color: 'white',
-              background: 'rgba(239,68,68,0.9)',
-              border: 'none',
-              borderRadius: 9999,
-              cursor: 'pointer',
-              animation: 'pulse 1.5s ease-in-out infinite',
-            }}
-          >
-            <Square size={24} strokeWidth={2} fill="currentColor" /> Stop
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              className="tt-tap-shake"
+              onClick={stopRecording}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                padding: '16px 32px',
+                fontSize: 18,
+                fontWeight: 700,
+                color: 'white',
+                background: 'rgba(239,68,68,0.9)',
+                border: 'none',
+                borderRadius: 9999,
+                cursor: 'pointer',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            >
+              <Square size={24} strokeWidth={2} fill="currentColor" /> Stop
+            </button>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color: 'var(--tt-text-secondary)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {formatDuration(recordingSeconds)}
+            </span>
+          </div>
         )}
 
         {state === 'recorded' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-            <audio ref={audioRef} controls style={{ width: '100%', maxWidth: 280 }} />
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button
-                type="button"
-                onClick={playRecorded}
+            {saveSuccess ? (
+              <p
+                className="tt-success-pop"
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '12px 24px',
-                  fontSize: 15,
-                  fontWeight: 600,
+                  margin: 0,
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
                   color: 'var(--tt-text-primary)',
-                  background: 'rgba(255,255,255,0.15)',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: 12,
-                  cursor: 'pointer',
                 }}
               >
-                <Play size={18} fill="currentColor" /> Play
-              </button>
-              <button
-                type="button"
-                onClick={saveJournal}
-                disabled={saving}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '12px 24px',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: 'white',
-                  background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-                  border: 'none',
-                  borderRadius: 12,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  opacity: saving ? 0.7 : 1,
-                }}
-              >
-                <Save size={18} /> {saving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
+                Saved!
+              </p>
+            ) : (
+              <>
+                <p style={{ color: 'var(--tt-text-secondary)', fontSize: 14, margin: '0 0 6px' }}>
+                  Your recording:
+                </p>
+                <audio ref={audioRef} controls style={{ width: '100%', maxWidth: 280 }} />
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    className="tt-tap-shake"
+                    onClick={playRecorded}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '12px 24px',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: 'var(--tt-text-primary)',
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Play size={18} fill="currentColor" /> Play
+                  </button>
+                  <button
+                    type="button"
+                    className="tt-tap-shake"
+                    onClick={saveJournal}
+                    disabled={saving}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '12px 24px',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: 'white',
+                      background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                      border: 'none',
+                      borderRadius: 12,
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.7 : 1,
+                    }}
+                  >
+                    <Save size={18} /> {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
