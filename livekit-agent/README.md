@@ -1,11 +1,9 @@
 # Turtle Talk LiveKit Agent
 
-Uses **Gemini Live API** (realtime) for full-duplex voice: speech-in and speech-out are handled by one Gemini model. No separate STT or TTS pipeline in the Node.js plugin — the realtime model does both.
+Uses **OpenAI Realtime API** for full-duplex voice: speech-in and speech-out are handled by one model. No separate STT or TTS pipeline — the realtime model does both.
 
-- **Model**: Gemini Live (realtime) via `@livekit/agents-plugin-google` (voice in + voice out).
-- **Auth**: `GOOGLE_API_KEY` (Google AI Studio).
-
-For a discrete **STT → LLM → TTS** pipeline with Gemini LLM + Gemini TTS, the Node plugin provides Gemini LLM and Gemini TTS; speech-to-text would need another provider (e.g. Deepgram or Google Cloud STT in Python). This agent uses the simpler realtime setup.
+- **Model**: OpenAI Realtime via `@livekit/agents-plugin-openai` (voice in + voice out).
+- **Auth**: `OPENAI_API_KEY` (OpenAI platform).
 
 ## Setup
 
@@ -17,10 +15,10 @@ For a discrete **STT → LLM → TTS** pipeline with Gemini LLM + Gemini TTS, th
    ```
    This writes `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` to `.env.local`.
 
-2. **Google AI (Gemini)**  
-   Get an API key from [Google AI Studio](https://aistudio.google.com/apikey) and add to `.env.local`:
+2. **OpenAI**  
+   Get an API key from [OpenAI platform](https://platform.openai.com/api-keys) and add to `.env.local`:
    ```bash
-   GOOGLE_API_KEY=your_key
+   OPENAI_API_KEY=your_key
    ```
 
 3. **Install and run**
@@ -29,7 +27,57 @@ For a discrete **STT → LLM → TTS** pipeline with Gemini LLM + Gemini TTS, th
    pnpm dev              # connect to LiveKit Cloud
    ```
 
+### Make commands (optional)
+
+From this directory you can use `make` for common tasks (handy on Linux/macOS or WSL; on Windows you can override `STOP_CMD` or use npm scripts directly):
+
+| Command       | Description |
+|--------------|-------------|
+| `make install` | Install dependencies (uses pnpm if available, else npm) |
+| `make build`   | Compile TypeScript |
+| `make debug`   | Run in dev mode (foreground) — for local debugging |
+| `make start`   | Build and run in production (foreground) |
+| `make stop`    | Stop the agent (default: `pkill` on Unix; override for systemd/pm2) |
+
+On a deployed server, stop via your process manager, e.g.:
+
+```bash
+make stop STOP_CMD="systemctl stop turtle-talk-agent"
+make stop STOP_CMD="pm2 stop shelly-agent"
+```
+
+### Run with Docker
+
+You can build and run the agent in a container. Pass env vars at runtime (or use an env file).
+
+**Build the image:**
+
+```bash
+docker build -t turtle-talk-agent .
+```
+
+**Run (pass env from host):**
+
+```bash
+docker run --rm \
+  -e LIVEKIT_URL \
+  -e LIVEKIT_API_KEY \
+  -e LIVEKIT_API_SECRET \
+  -e OPENAI_API_KEY \
+  turtle-talk-agent
+```
+
+**Run with an env file (create `.env.prod` with the four variables):**
+
+```bash
+docker run --rm --env-file .env.prod turtle-talk-agent
+```
+
+The image uses Node 20 and runs `node main.js start`. For a lockfile-based build, ensure `package-lock.json` exists (`npm install` once if needed).
+
 Then use the [LiveKit Playground](https://docs.livekit.io/agents/start/playground/) or the Turtle Talk app with `NEXT_PUBLIC_VOICE_PROVIDER=livekit` and a token from `/api/livekit/token`.
+
+**No audio?** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) (agent must be running; env vars; LiveKit flow).
 
 ## Deploy to LiveKit Cloud
 
@@ -39,4 +87,4 @@ From this directory:
 lk agent create
 ```
 
-Set `GOOGLE_API_KEY` (and optionally `LIVEKIT_*`) in LiveKit Cloud secrets for the agent.
+Set `OPENAI_API_KEY` (and optionally `LIVEKIT_*`) in LiveKit Cloud secrets for the agent.

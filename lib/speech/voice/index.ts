@@ -6,12 +6,12 @@ export { GeminiLiveVoiceProvider } from './gemini-live';
 export { LiveKitVoiceProvider } from './livekit';
 export { OpenAIRealtimeVoiceProvider } from './openai-realtime';
 
-/** Read NEXT_PUBLIC_VOICE_PROVIDER (default: 'native') and return the right provider instance.
+/** Read NEXT_PUBLIC_VOICE_PROVIDER (default: 'livekit') and return the right provider instance.
  *  Call this inside a useEffect or 'use client' context — both providers use browser APIs. */
 export function createVoiceProvider(
   name?: string,
 ): import('./types').VoiceConversationProvider {
-  const provider = name ?? process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'native';
+  const provider = name ?? process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'livekit';
   if (provider === 'vapi') {
     const { VapiVoiceProvider } = require('./vapi') as typeof import('./vapi');
     return new VapiVoiceProvider();

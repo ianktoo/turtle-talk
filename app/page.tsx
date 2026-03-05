@@ -1,12 +1,15 @@
 import BottomNav from "./components/BottomNav";
-import MessagesButton from "./components/MessagesButton";
+import HomeMessagesStrip from "./components/HomeMessagesStrip";
 
 export default function Home() {
   return (
     <>
       <main
-        className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 select-none"
-        style={{ paddingBottom: 140, gap: 0 }}
+        className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 select-none home-hero"
+        style={{
+          paddingBottom: "var(--hero-spacing-bottom)",
+          gap: "var(--hero-gap)",
+        }}
       >
         {/* Turtle mascot */}
         <div
@@ -24,10 +27,10 @@ export default function Home() {
         {/* Title */}
         <h1
           style={{
-            fontSize: "clamp(2.4rem, 8vw, 4rem)",
+            fontSize: "var(--hero-title-size)",
             fontWeight: 900,
-            color: "white",
-            textShadow: "0 3px 12px rgba(0,0,0,0.35)",
+            color: "var(--tt-text-primary)",
+            textShadow: "var(--hero-title-shadow)",
             letterSpacing: "-0.02em",
             marginBottom: 6,
             textAlign: "center",
@@ -38,18 +41,30 @@ export default function Home() {
 
         <p
           style={{
-            color: "rgba(255,255,255,0.85)",
-            fontSize: "clamp(1rem, 3.5vw, 1.25rem)",
-            marginBottom: 28,
+            color: "var(--tt-text-secondary)",
+            fontSize: "var(--hero-subtitle-size)",
+            marginBottom: 0,
             textAlign: "center",
             fontWeight: 600,
           }}
         >
-          Your friendly sea turtle! 🌊
+          Talk to Shelly
         </p>
 
-        {/* Messages pill — glassy, below the hero text */}
-        <MessagesButton count={0} />
+        <p
+          style={{
+            color: 'var(--tt-text-muted)',
+            fontSize: 'clamp(0.8rem, 2.5vw, 0.95rem)',
+            marginBottom: 0,
+            textAlign: 'center',
+            fontWeight: 500,
+          }}
+        >
+          Your turtle friend is ready to chat 🌿
+        </p>
+
+        {/* Messages — one card per message, dismissable, up to 3 */}
+        <HomeMessagesStrip />
       </main>
 
       <BottomNav />

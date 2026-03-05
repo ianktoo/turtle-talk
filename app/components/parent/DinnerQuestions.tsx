@@ -46,11 +46,11 @@ export function DinnerQuestions({
   const list = tab === 'pending' ? pending : completed;
 
   return (
-    <section>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+    <div>
+      <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--pd-text-primary)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
         Dinner Questions
       </h2>
-      <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 16px' }}>
+      <p style={{ fontSize: 15, color: 'var(--pd-text-secondary)', margin: '0 0 16px' }}>
         Engage with your kid
       </p>
 
@@ -59,7 +59,7 @@ export function DinnerQuestions({
           display: 'flex',
           gap: 4,
           marginBottom: 16,
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
         }}
       >
         <button
@@ -70,9 +70,9 @@ export function DinnerQuestions({
             fontSize: 14,
             fontWeight: 600,
             border: 'none',
-            borderBottom: tab === 'pending' ? '2px solid #0f766e' : '2px solid transparent',
+            borderBottom: tab === 'pending' ? '2px solid var(--pd-accent)' : '2px solid transparent',
             background: 'none',
-            color: tab === 'pending' ? '#0f766e' : '#6b7280',
+            color: tab === 'pending' ? 'var(--pd-accent)' : 'var(--pd-text-tertiary)',
             cursor: 'pointer',
             marginBottom: -1,
           }}
@@ -87,9 +87,9 @@ export function DinnerQuestions({
             fontSize: 14,
             fontWeight: 600,
             border: 'none',
-            borderBottom: tab === 'completed' ? '2px solid #0f766e' : '2px solid transparent',
+            borderBottom: tab === 'completed' ? '2px solid var(--pd-accent)' : '2px solid transparent',
             background: 'none',
-            color: tab === 'completed' ? '#0f766e' : '#6b7280',
+            color: tab === 'completed' ? 'var(--pd-accent)' : 'var(--pd-text-tertiary)',
             cursor: 'pointer',
             marginBottom: -1,
           }}
@@ -99,12 +99,16 @@ export function DinnerQuestions({
       </div>
 
       {loading && (
-        <p style={{ color: '#6b7280', fontSize: 14 }}>Loading…</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[80, 65, 72].map((w, i) => (
+            <div key={i} className="pd-skeleton" style={{ height: 52, width: `${w}%`, borderRadius: 14 }} />
+          ))}
+        </div>
       )}
 
       {!loading && list.length === 0 && tab === 'pending' && (
         <div style={{ marginBottom: 12 }}>
-          <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 12px' }}>
+          <p style={{ color: 'var(--pd-text-secondary)', fontSize: 15, margin: '0 0 12px' }}>
             No pending questions. Generate some to use at dinner.
           </p>
           {onGenerate && (
@@ -114,11 +118,11 @@ export function DinnerQuestions({
               disabled={generating}
               style={{
                 padding: '10px 16px',
-                borderRadius: 8,
+                borderRadius: 10,
                 border: 'none',
-                background: '#0f766e',
+                background: 'var(--pd-accent)',
                 color: 'white',
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 cursor: generating ? 'wait' : 'pointer',
               }}
@@ -130,7 +134,7 @@ export function DinnerQuestions({
       )}
 
       {!loading && list.length === 0 && tab === 'completed' && (
-        <p style={{ color: '#6b7280', fontSize: 14 }}>No completed questions yet.</p>
+        <p style={{ color: 'var(--pd-text-tertiary)', fontSize: 15 }}>No completed questions yet.</p>
       )}
 
       {!loading && list.length > 0 && (
@@ -148,8 +152,8 @@ export function DinnerQuestions({
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 14,
-                  background: done ? '#f0fdf4' : '#fff',
-                  border: `1.5px solid ${done ? '#86efac' : '#e5e7eb'}`,
+                  background: done ? 'var(--pd-success-soft)' : 'var(--pd-surface-soft)',
+                  border: `1px solid ${done ? 'var(--pd-success-border)' : 'var(--pd-card-border)'}`,
                   borderRadius: 14,
                   padding: '14px 16px',
                   cursor: done ? 'default' : isMarking ? 'wait' : 'pointer',
@@ -163,8 +167,8 @@ export function DinnerQuestions({
                     width: 20,
                     height: 20,
                     borderRadius: 6,
-                    border: `2px solid ${done ? '#22c55e' : '#d1d5db'}`,
-                    background: done ? '#22c55e' : 'transparent',
+                    border: `2px solid ${done ? 'var(--pd-success)' : 'var(--pd-card-border)'}`,
+                    background: done ? 'var(--pd-success)' : 'transparent',
                     flexShrink: 0,
                     marginTop: 1,
                     display: 'flex',
@@ -172,26 +176,46 @@ export function DinnerQuestions({
                     justifyContent: 'center',
                   }}
                 >
-                  {done && <span style={{ color: '#fff', fontSize: 12, lineHeight: 1 }}>✓</span>}
+                  {done && <span style={{ color: 'white', fontSize: 12, lineHeight: 1 }}>✓</span>}
                   {!done && isMarking && (
-                    <span style={{ color: '#6b7280', fontSize: 10 }}>…</span>
+                    <span style={{ color: 'var(--pd-text-tertiary)', fontSize: 10 }}>…</span>
                   )}
                 </div>
                 <span
                   style={{
-                    fontSize: 14,
-                    color: done ? '#6b7280' : '#374151',
+                    fontSize: 15,
+                    color: done ? 'var(--pd-text-tertiary)' : 'var(--pd-text-primary)',
                     textDecoration: done ? 'line-through' : 'none',
                     lineHeight: 1.5,
                   }}
                 >
                   {q.question}
                 </span>
+                {q.theme && (
+                  <span
+                    style={{
+                      marginLeft: 10,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--pd-accent)',
+                      background: 'var(--pd-accent-soft)',
+                      border: '1px solid var(--pd-accent)',
+                      borderRadius: 4,
+                      padding: '1px 5px',
+                      whiteSpace: 'nowrap',
+                      letterSpacing: '0.03em',
+                      flexShrink: 0,
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    {q.theme}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       )}
-    </section>
+    </div>
   );
 }

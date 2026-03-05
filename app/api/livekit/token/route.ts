@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomConfiguration, RoomAgentDispatch } from 'livekit-server-sdk';
 
 /**
  * POST /api/livekit/token
- * Body: { roomName?: string, participantName?: string }
+ * Body: { roomName?: string, participantName?: string, childName?: string, topics?: string[] }
  * Returns: { token, roomName } for the client to join the LiveKit room.
  * Requires LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL in env.
  */
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   let roomName: string;
   let participantName: string;
+  let dispatchMetadata: string | undefined;
   try {
     const body = await request.json().catch(() => ({}));
     roomName =
@@ -29,6 +30,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       typeof body.participantName === 'string' && body.participantName.trim()
         ? body.participantName.trim()
         : 'child';
+    const childName =
+      typeof body.childName === 'string' && body.childName.trim() ? body.childName.trim() : undefined;
+    const topics = Array.isArray(body.topics) ? (body.topics as string[]).filter((t): t is string => typeof t === 'string') : [];
+    if (childName !== undefined || topics.length > 0) {
+      dispatchMetadata = JSON.stringify({ childName: childName ?? null, topics });
+    }
   } catch {
     roomName = `talk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     participantName = 'child';
@@ -41,6 +48,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ttl: '1h',
     });
     at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
+    // Agent uses agentName: 'shelly', which turns off automatic dispatch. Request dispatch on join so the agent joins this room.
+    at.roomConfig = new RoomConfiguration({
+      agents: [new RoomAgentDispatch({ agentName: 'shelly', metadata: dispatchMetadata ?? '' })],
+    });
     const token = await at.toJwt();
 
     const livekitUrl = process.env.LIVEKIT_URL ?? '';

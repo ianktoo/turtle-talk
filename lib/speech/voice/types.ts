@@ -2,6 +2,7 @@ import type { TurtleMood, Message, MissionSuggestion, Mission } from '../types';
 
 export type VoiceSessionState =
   | 'idle'
+  | 'connecting'
   | 'listening'
   | 'recording'
   | 'processing'
