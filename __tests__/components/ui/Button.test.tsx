@@ -40,9 +40,11 @@ describe('Button', () => {
     expect(screen.getByRole('button').getAttribute('data-variant')).toBe('gold');
   });
 
-  it('renders connect variant', () => {
+  it('renders connect variant with full opacity when not disabled', () => {
     render(<Button variant="connect">Connect</Button>);
-    expect(screen.getByRole('button').getAttribute('data-variant')).toBe('connect');
+    const btn = screen.getByRole('button');
+    expect(btn.getAttribute('data-variant')).toBe('connect');
+    expect(btn).toHaveStyle({ opacity: '1' });
   });
 
   it('renders with icon', () => {
