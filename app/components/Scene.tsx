@@ -42,6 +42,30 @@ export default function Scene() {
         }}
       />
 
+      {/* Clouds — PNG asset, drift at varying speeds; night sky covers them naturally */}
+      {[
+        { top: "6%",  width: "24vw", duration: "70s", delay: "0s",    opacity: 0.85 },
+        { top: "14%", width: "17vw", duration: "50s", delay: "-22s",  opacity: 0.70 },
+        { top: "4%",  width: "13vw", duration: "40s", delay: "-35s",  opacity: 0.60 },
+      ].map((cloud, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          src="/assets/white-cloud.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute pointer-events-none"
+          style={{
+            top: cloud.top,
+            width: cloud.width,
+            height: "auto",
+            opacity: cloud.opacity,
+            animation: `cloudDrift ${cloud.duration} linear infinite`,
+            animationDelay: cloud.delay,
+          }}
+        />
+      ))}
+
       {/* Sky – Night */}
       <div
         className="absolute inset-0"
