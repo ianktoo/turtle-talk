@@ -140,8 +140,8 @@ body {
 
 /* Cloud drift — single keyframe, speed varies per cloud instance */
 @keyframes cloudDrift {
-  from { transform: translateX(-35vw); }
-  to   { transform: translateX(110vw); }
+  from { transform: translateX(-30vw); }
+  to   { transform: translateX(100vw); }
 }
 
 /* Ocean wave shimmer */

@@ -57,6 +57,7 @@ export default function Scene() {
           className="absolute pointer-events-none"
           style={{
             top: cloud.top,
+            left: 0,
             width: cloud.width,
             height: "auto",
             opacity: cloud.opacity,
