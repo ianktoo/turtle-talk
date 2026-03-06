@@ -18,18 +18,6 @@ const STARS = [
   { x: 23, y: 26, r: 1,   delay: "1.9s" },
 ];
 
-function CloudLayer({ style }: { style?: React.CSSProperties }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/cloud.svg"
-      alt=""
-      aria-hidden="true"
-      className="absolute pointer-events-none"
-      style={style}
-    />
-  );
-}
 
 export default function Scene() {
   return (
@@ -111,28 +99,6 @@ export default function Scene() {
         }}
       />
 
-      {/* Clouds — full SVG sprite drifting as wide layers */}
-      <CloudLayer
-        style={{
-          top: "-5%",
-          left: 0,
-          width: "30vw",
-          height: "auto",
-          animation: `cloudDrift1 60s linear infinite`,
-          opacity: 0.9,
-        }}
-      />
-      <CloudLayer
-        style={{
-          top: "4%",
-          left: 0,
-          width: "22vw",
-          height: "auto",
-          animation: `cloudDrift2 80s linear infinite`,
-          animationDelay: "-30s",
-          opacity: 0.7,
-        }}
-      />
 
       {/* Ocean */}
       <div className="absolute bottom-0 left-0 right-0" style={{ height: "28vh" }}>

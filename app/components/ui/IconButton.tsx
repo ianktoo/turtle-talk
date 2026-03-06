@@ -6,6 +6,7 @@ import type { ButtonVariant } from './Button';
 const ICON_BTN_STYLES: Partial<Record<ButtonVariant, React.CSSProperties>> = {
   ghost: {
     background: 'var(--tt-ghost-bg)',
+    boxShadow: 'none',
     border: '1px solid var(--tt-ghost-border)',
   },
   danger: {
@@ -26,7 +27,7 @@ const ICON_BTN_STYLES: Partial<Record<ButtonVariant, React.CSSProperties>> = {
 };
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
+  variant?: Exclude<ButtonVariant, 'connect'>;
   /** Override the default 64px size (px value) */
   size?: number;
   children: ReactNode;
