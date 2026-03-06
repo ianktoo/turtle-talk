@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMicPermission } from '@/app/hooks/useMicPermission';
 import { useVoiceSession } from '@/app/hooks/useVoiceSession';
@@ -14,8 +14,11 @@ import MicPermission from '@/app/components/talk/MicPermission';
 import MissionSelectView from '@/app/components/talk/MissionSelectView';
 import ConversationSubtitles from '@/app/components/talk/ConversationSubtitles';
 import ConversationBubblesCard from '@/app/components/talk/ConversationBubblesCard';
-import TalkBottomBar from '@/app/components/talk/TalkBottomBar';
+import BottomNav from '@/app/components/BottomNav';
+import type { TalkNavProps } from '@/app/components/BottomNav';
 import type { MissionSuggestion } from '@/lib/speech/types';
+
+const ACTIVE_STATES_SET = new Set(['listening', 'recording', 'processing', 'speaking']);
 
 const STATE_LABELS: Record<string, string> = {
   idle:       'Getting ready...',
@@ -27,6 +30,52 @@ const STATE_LABELS: Record<string, string> = {
   muted:      'Microphone off 🔇',
   ended:      'Goodbye! 🌊',
 };
+
+function PullToRetry({ children, onRetry }: { children: React.ReactNode; onRetry?: () => void }) {
+  const [dragY, setDragY] = useState(0);
+  const startYRef = useRef<number | null>(null);
+  const triggeredRef = useRef(false);
+  const THRESHOLD = 60;
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!onRetry) return;
+    startYRef.current = e.clientY;
+    triggeredRef.current = false;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (startYRef.current === null || !onRetry) return;
+    const delta = Math.max(0, e.clientY - startYRef.current);
+    setDragY(Math.min(delta, THRESHOLD + 20));
+    if (delta >= THRESHOLD && !triggeredRef.current) {
+      triggeredRef.current = true;
+      onRetry();
+    }
+  };
+
+  const onPointerUp = () => {
+    startYRef.current = null;
+    setDragY(0);
+  };
+
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={{
+        transform: `translateY(${dragY}px)`,
+        transition: dragY === 0 ? 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)' : 'none',
+        cursor: onRetry ? 'grab' : 'default',
+        touchAction: 'none',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 function ConversationView() {
   const router = useRouter();
@@ -54,7 +103,7 @@ function ConversationView() {
   const providerRef = useRef<ReturnType<typeof createVoiceProvider> | null>(null);
   if (!providerRef.current) providerRef.current = createVoiceProvider();
 
-  const { state, mood, messages, pendingUserTranscript, isMuted, error, toggleMute, endConversation, startListening } =
+  const { state, mood, messages, pendingUserTranscript, isMuted, error, isMeaningful, toggleMute, endConversation, startListening } =
     useVoiceSession(providerRef.current, {
       // Stay on /talk when call ends; post-call bar shows Continue / My Missions / Home
       onEnd: () => {},
@@ -71,6 +120,21 @@ function ConversationView() {
 
   // Do not auto-start: AudioContext must be created/resumed after a user gesture (Chrome autoplay policy).
   // Start only when the user taps "Start" / "Talk to Shelly" so the gesture unblocks audio.
+
+  const callEnded = state === 'ended';
+
+  const noopFn = useCallback(() => {}, []);
+
+  const talkNavProps: TalkNavProps = useMemo(() => ({
+    state,
+    isMuted,
+    isMeaningful,
+    hasError: !!error,
+    onStart: startListening,
+    onEnd: endConversation,
+    onToggleMute: ACTIVE_STATES_SET.has(state) ? toggleMute : noopFn,
+    onContinue: startListening,
+  }), [state, isMuted, isMeaningful, error, startListening, endConversation, toggleMute, noopFn]);
 
   if (pendingMissionChoices) {
     return (
@@ -89,8 +153,6 @@ function ConversationView() {
     );
   }
 
-  const callEnded = state === 'ended';
-
   return (
     <main
       style={{
@@ -102,7 +164,7 @@ function ConversationView() {
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: 48,
-        paddingBottom: 100,
+        paddingBottom: 120,
         paddingLeft: 20,
         paddingRight: 20,
         gap: 16,
@@ -135,41 +197,18 @@ function ConversationView() {
       </div>
 
       {/* ── Turtle (moved up) ── */}
-      <div className={state === 'listening' ? 'tt-listening-ring' : undefined}>
-        <TurtleCharacter mood={mood} size={200} />
-      </div>
+      <PullToRetry onRetry={error ? startListening : undefined}>
+        <div className={state === 'listening' ? 'tt-listening-ring' : undefined}>
+          <TurtleCharacter mood={mood} size={200} />
+        </div>
+      </PullToRetry>
 
       {/* ── Conversation card: last 3 bubbles, show/hide toggle ── */}
       <div style={{ width: '100%', maxWidth: 440 }}>
         <ConversationBubblesCard messages={messages} pendingUserTranscript={pendingUserTranscript} />
       </div>
 
-      {/* ── When idle: Start button; when connecting: same button with "Connecting..." and disabled; otherwise status label ── */}
-      {state === 'idle' || state === 'connecting' ? (
-        <button
-          type="button"
-          className="tt-tap-shake"
-          onClick={() => state === 'idle' && startListening()}
-          disabled={state === 'connecting'}
-          style={{
-            padding: '12px 28px',
-            borderRadius: 9999,
-            border: '2px solid rgba(255,255,255,0.3)',
-            background: state === 'connecting'
-              ? 'linear-gradient(135deg, #15803d, #16a34a)'
-              : 'linear-gradient(135deg, #16a34a, #22c55e)',
-            color: 'white',
-            fontSize: '1rem',
-            fontWeight: 700,
-            cursor: state === 'connecting' ? 'wait' : 'pointer',
-            boxShadow: '0 4px 20px rgba(22,163,74,0.4)',
-            opacity: state === 'connecting' ? 0.9 : 1,
-          }}
-          aria-label={state === 'connecting' ? 'Connecting to Shelly' : 'Start conversation with Shelly'}
-        >
-          {state === 'connecting' ? 'Connecting…' : 'Talk to Shelly'}
-        </button>
-      ) : (
+      {state !== 'idle' && state !== 'connecting' && state !== 'ended' && (
         <p
           style={{
             color: 'rgba(255,255,255,0.65)',
@@ -227,18 +266,8 @@ function ConversationView() {
         </button>
       )}
 
-      {/* ── Contextual bottom bar: hidden in idle (before session starts), shows Mute/End once active, post-call actions after ended ── */}
-      {state !== 'idle' && (
-        <TalkBottomBar
-          callEnded={callEnded}
-          onEndCall={endConversation}
-          onContinueConversation={startListening}
-          isMuted={isMuted}
-          onToggleMute={state === 'connecting' ? undefined : toggleMute}
-          hasError={!!error}
-          onTryAgain={error ? startListening : undefined}
-        />
-      )}
+      {/* ── Bottom nav: always rendered, shows call controls when in active/connecting/ended state ── */}
+      <BottomNav talkProps={talkNavProps} />
     </main>
   );
 }

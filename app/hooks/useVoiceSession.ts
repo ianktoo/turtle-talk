@@ -20,6 +20,7 @@ interface UseVoiceSessionResult {
   pendingUserTranscript: string | null;
   isMuted: boolean;
   error: string | null;
+  isMeaningful: boolean;
   startListening: () => Promise<void>;
   toggleMute: () => void;
   endConversation: () => void;
@@ -39,6 +40,9 @@ export function useVoiceSession(
   const [pendingUserTranscript, setPendingUserTranscript] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMeaningful, setIsMeaningful] = useState(false);
+  const callStartRef = useRef<number | null>(null);
+  const meaningfulTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep option callbacks in refs so event handlers never go stale
   const optsRef = useRef(options);
@@ -46,7 +50,20 @@ export function useVoiceSession(
 
   // Register provider event listeners once (re-run only if provider instance changes)
   useEffect(() => {
-    const onState  = (s: VoiceSessionState) => setState(s);
+    const ACTIVE_STATES = new Set(['listening', 'recording', 'processing', 'speaking']);
+    const onState = (s: VoiceSessionState) => {
+      setState(s);
+      if (ACTIVE_STATES.has(s) && callStartRef.current === null) {
+        callStartRef.current = Date.now();
+        meaningfulTimerRef.current = setTimeout(() => setIsMeaningful(true), 40_000);
+      }
+      if (s === 'ended' || s === 'idle') {
+        if (meaningfulTimerRef.current) clearTimeout(meaningfulTimerRef.current);
+        meaningfulTimerRef.current = null;
+        callStartRef.current = null;
+        // keep isMeaningful true until next call so gold state persists to post-call bar
+      }
+    };
     const onMood   = (m: TurtleMood) => setMood(m);
     const onMsgs   = (msgs: Message[]) => {
       setMessages(msgs);
@@ -85,12 +102,14 @@ export function useVoiceSession(
       provider.off('end',            onEnd);
       // Clean up the provider when unmounting or when provider changes
       provider.stop();
+      if (meaningfulTimerRef.current) clearTimeout(meaningfulTimerRef.current);
     };
   }, [provider]);
 
   const startListening = useCallback(async () => {
     console.info('[Shelly] startListening called');
     setError(null);
+    setIsMeaningful(false);
     const opts = optsRef.current;
     await provider.start({
       childName:         opts.childName,
@@ -112,5 +131,5 @@ export function useVoiceSession(
     provider.stop();
   }, [provider]);
 
-  return { state, mood, messages, pendingUserTranscript, isMuted, error, startListening, toggleMute, endConversation };
+  return { state, mood, messages, pendingUserTranscript, isMuted, error, isMeaningful, startListening, toggleMute, endConversation };
 }
