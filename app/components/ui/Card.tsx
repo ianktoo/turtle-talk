@@ -4,21 +4,15 @@ import type { ReactNode } from 'react';
 
 export type CardVariant = 'default' | 'sm';
 
+const BASE_CARD: React.CSSProperties = {
+  background: 'var(--tt-surface)',
+  border: '1px solid var(--tt-surface-border)',
+  boxShadow: 'var(--tt-shadow-glass)',
+};
+
 const VARIANT_STYLES: Record<CardVariant, React.CSSProperties> = {
-  default: {
-    background: 'var(--tt-surface)',
-    border: '1px solid var(--tt-surface-border)',
-    boxShadow: 'var(--tt-shadow-glass)',
-    borderRadius: 'var(--tt-radius-card)',
-    padding: '20px',
-  },
-  sm: {
-    background: 'var(--tt-surface)',
-    border: '1px solid var(--tt-surface-border)',
-    boxShadow: 'var(--tt-shadow-glass)',
-    borderRadius: 'var(--tt-radius-card-sm)',
-    padding: '16px',
-  },
+  default: { ...BASE_CARD, borderRadius: 'var(--tt-radius-card)',    padding: '20px' },
+  sm:      { ...BASE_CARD, borderRadius: 'var(--tt-radius-card-sm)', padding: '16px' },
 };
 
 export interface CardProps {

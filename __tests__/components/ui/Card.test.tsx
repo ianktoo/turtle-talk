@@ -36,4 +36,10 @@ describe('Card', () => {
     const el = screen.getByText('content');
     expect(el).toHaveStyle({ borderRadius: 'var(--tt-radius-card)' });
   });
+
+  it('sm variant has borderRadius CSS var applied', () => {
+    render(<Card variant="sm">content</Card>);
+    const el = screen.getByText('content');
+    expect(el).toHaveStyle({ borderRadius: 'var(--tt-radius-card-sm)' });
+  });
 });
