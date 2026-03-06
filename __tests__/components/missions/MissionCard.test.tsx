@@ -105,8 +105,6 @@ describe('MissionCard', () => {
   it('opens overflow menu on button click and shows Remove option when onDelete provided', () => {
     const onDelete = jest.fn();
     render(<MissionCard mission={baseMission} onDelete={onDelete} />);
-    const menuToggle = screen.getByRole('button', { name: '' });
-    // aria-haspopup button
     const toggleBtn = document.querySelector('[aria-haspopup="menu"]') as HTMLElement;
     fireEvent.click(toggleBtn);
     expect(screen.getByRole('menu')).toBeInTheDocument();
