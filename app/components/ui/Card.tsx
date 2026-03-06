@@ -39,7 +39,6 @@ export function Card({
       data-variant={variant}
       className={className}
       style={{
-        color: 'var(--tt-text-primary)',
         ...VARIANT_STYLES[variant],
         ...style,
       }}
