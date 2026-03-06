@@ -41,6 +41,8 @@
   --tt-icon-btn-size:   64px;
   --tt-btn-font-size:   0.95rem;
   --tt-btn-font-weight: 700;
+  --tt-btn-color:          #ffffff;
+  --tt-btn-border-overlay: rgba(255, 255, 255, 0.25);
 
   /* ── Text ───────────────────────────────────────────────────────────────── */
   --tt-text-primary:   #ffffff;

@@ -40,6 +40,11 @@ describe('Button', () => {
     expect(screen.getByRole('button').getAttribute('data-variant')).toBe('gold');
   });
 
+  it('renders connect variant', () => {
+    render(<Button variant="connect">Connect</Button>);
+    expect(screen.getByRole('button').getAttribute('data-variant')).toBe('connect');
+  });
+
   it('renders with icon', () => {
     render(<Button icon={<span data-testid="icon" />}>With Icon</Button>);
     expect(screen.getByTestId('icon')).toBeInTheDocument();

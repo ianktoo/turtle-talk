@@ -4,37 +4,38 @@ import type { ReactNode, ButtonHTMLAttributes } from 'react';
 
 export type ButtonVariant = 'primary' | 'danger' | 'gold' | 'ghost' | 'connect';
 
+const BASE_BTN: React.CSSProperties = {
+  border: '2px solid var(--tt-btn-border-overlay)',
+  color: 'var(--tt-btn-color)',
+};
+
 const VARIANT_STYLES: Record<ButtonVariant, React.CSSProperties> = {
   primary: {
+    ...BASE_BTN,
     background: 'var(--tt-grad-primary)',
     boxShadow: 'var(--tt-shadow-primary)',
-    border: '2px solid rgba(255,255,255,0.25)',
-    color: '#ffffff',
   },
   danger: {
+    ...BASE_BTN,
     background: 'var(--tt-grad-danger)',
     boxShadow: 'var(--tt-shadow-danger)',
-    border: '2px solid rgba(255,255,255,0.25)',
-    color: '#ffffff',
   },
   gold: {
+    ...BASE_BTN,
     background: 'var(--tt-grad-gold)',
     boxShadow: 'var(--tt-shadow-gold)',
-    border: '2px solid rgba(255,255,255,0.25)',
-    color: '#ffffff',
   },
   ghost: {
     background: 'var(--tt-ghost-bg)',
     boxShadow: 'none',
     border: '1px solid var(--tt-ghost-border)',
-    color: '#ffffff',
+    color: 'var(--tt-btn-color)',
   },
   connect: {
+    ...BASE_BTN,
     background: 'var(--tt-grad-connect)',
     boxShadow: 'none',
-    border: '2px solid rgba(255,255,255,0.25)',
-    color: '#ffffff',
-    opacity: 0.85,
+    // NOTE: no opacity here — disabled state is handled by the component logic below
   },
 };
 
@@ -71,10 +72,10 @@ export function Button({
         fontWeight: 'var(--tt-btn-font-weight)' as React.CSSProperties['fontWeight'],
         cursor: disabled ? 'not-allowed' : 'pointer',
         whiteSpace: 'nowrap',
-        opacity: disabled ? 0.6 : 1,
         transition: `background var(--tt-transition-mid), box-shadow var(--tt-transition-mid)`,
         ...VARIANT_STYLES[variant],
         ...style,
+        opacity: disabled ? 0.6 : 1,  // always last — overrides any variant opacity
       }}
       {...rest}
     >
