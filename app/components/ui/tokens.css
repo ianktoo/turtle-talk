@@ -22,7 +22,7 @@
   --tt-grad-primary: linear-gradient(135deg, var(--tt-primary-dark), var(--tt-primary));
   --tt-grad-danger:  linear-gradient(135deg, var(--tt-danger-dark),  var(--tt-danger));
   --tt-grad-gold:    linear-gradient(135deg, var(--tt-gold-dark),    var(--tt-gold));
-  --tt-grad-connect: linear-gradient(135deg, #15803d, var(--tt-primary-dark));
+  --tt-grad-connect: linear-gradient(135deg, var(--tt-primary-dark), var(--tt-primary-dark));
 
   /* ── Shadows ────────────────────────────────────────────────────────────── */
   --tt-shadow-primary: 0 4px 20px rgba(22, 163, 74, 0.45);
@@ -41,6 +41,12 @@
   --tt-icon-btn-size:   64px;
   --tt-btn-font-size:   0.95rem;
   --tt-btn-font-weight: 700;
+
+  /* ── Text ───────────────────────────────────────────────────────────────── */
+  --tt-text-primary:   #ffffff;
+  --tt-text-secondary: rgba(255, 255, 255, 0.88);
+  --tt-text-tertiary:  rgba(255, 255, 255, 0.7);
+  --tt-text-muted:     rgba(255, 255, 255, 0.5);
 
   /* ── Motion ─────────────────────────────────────────────────────────────── */
   --tt-transition-fast:   0.15s ease;
