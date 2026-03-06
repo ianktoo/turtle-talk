@@ -6,6 +6,19 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+interface AdminCard {
+  title: string;
+  description: string;
+  href?: string;
+}
+
+const cards: AdminCard[] = [
+  { title: 'User management', description: 'View and manage all accounts — access status, suspension, and roles.', href: '/admin/users' },
+  { title: 'Waiting list', description: 'Review, invite, approve, or reject access requests.', href: '/admin/waiting-list' },
+  { title: 'Support requests', description: 'Coming soon' },
+  { title: 'Feature flags', description: 'Coming soon' },
+];
+
 export default function AdminPage() {
   return (
     <div
@@ -25,9 +38,7 @@ export default function AdminPage() {
           justifyContent: 'space-between',
         }}
       >
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>
-          Admin
-        </h1>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>Admin</h1>
         <Link
           href="/parent"
           style={{ fontSize: 14, color: '#0f766e', textDecoration: 'none' }}
@@ -45,9 +56,6 @@ export default function AdminPage() {
           gap: 24,
         }}
       >
-        <p style={{ color: '#6b7280', margin: 0 }}>
-          Admin dashboard. User management, customer management, role management, support requests, and feature flags will appear here as cards.
-        </p>
         <section
           style={{
             display: 'grid',
@@ -55,61 +63,50 @@ export default function AdminPage() {
             gap: 16,
           }}
         >
-          <div
-            style={{
+          {cards.map((card) => {
+            const inner = (
+              <>
+                <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: '#111827' }}>
+                  {card.title}
+                </h2>
+                <p style={{ margin: 0, fontSize: 13, color: card.href ? '#0f766e' : '#6b7280' }}>
+                  {card.href ? card.description : 'Coming soon'}
+                </p>
+              </>
+            );
+
+            const sharedStyle: React.CSSProperties = {
               padding: 20,
               background: '#fff',
               border: '1px solid #e5e7eb',
               borderRadius: 12,
-            }}
-          >
-            <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600 }}>User management</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Coming soon</p>
-          </div>
-          <div
-            style={{
-              padding: 20,
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-            }}
-          >
-            <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600 }}>Customer management</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Coming soon</p>
-          </div>
-          <div
-            style={{
-              padding: 20,
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-            }}
-          >
-            <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600 }}>Role management</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Coming soon</p>
-          </div>
-          <div
-            style={{
-              padding: 20,
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-            }}
-          >
-            <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600 }}>Support requests</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Coming soon</p>
-          </div>
-          <div
-            style={{
-              padding: 20,
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-            }}
-          >
-            <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600 }}>Feature flags</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Coming soon</p>
-          </div>
+              display: 'block',
+              textDecoration: 'none',
+              transition: 'box-shadow 0.15s, border-color 0.15s',
+            };
+
+            return card.href ? (
+              <Link
+                key={card.title}
+                href={card.href}
+                style={sharedStyle}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)';
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = '#0f766e';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = 'none';
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = '#e5e7eb';
+                }}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div key={card.title} style={sharedStyle}>
+                {inner}
+              </div>
+            );
+          })}
         </section>
       </main>
     </div>
