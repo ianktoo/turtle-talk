@@ -13,7 +13,6 @@ interface AdminUser {
   created_at: string;
 }
 
-export const metadata = undefined; // client component — metadata set by layout
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   admin: { label: 'Admin', color: '#0f766e', bg: 'rgba(15,118,110,0.12)' },
