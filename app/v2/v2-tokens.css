@@ -1,0 +1,97 @@
+/* V2 Child UI — design tokens (light theme) */
+
+.v2-ui {
+  --v2-primary: #00CFB9;
+  --v2-primary-dark: #00b8a3;
+  --v2-bg: #fff5c1;
+  --v2-surface: #ffffff;
+  --v2-glass: rgba(255, 255, 255, 0.72);
+  --v2-glass-border: rgba(255, 255, 255, 0.5);
+  --v2-glass-strong: rgba(255, 255, 255, 0.88);
+  --v2-text-primary: #1a1a1a;
+  --v2-text-secondary: #555555;
+  --v2-text-muted: #777777;
+  --v2-radius-pill: 9999px;
+  --v2-radius-card: 16px;
+  --v2-shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --v2-shadow-menu: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --v2-transition-fast: 0.15s ease;
+  --v2-transition-spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --v2-touch-min: 44px;
+  --v2-end-call-red: #ea4d3d;
+  --v2-bubble-user-bg: #eee;
+  --v2-status-ok: #22c55e;
+  --v2-status-warning: #eab308;
+  --v2-status-error: #dc2626;
+  --v2-gold: #d97706;
+  --v2-gold-dark: #b45309;
+  --v2-mission-easy: #22c55e;
+  --v2-mission-easy-selected: #16a34a;
+  --v2-mission-medium: #f59e0b;
+  --v2-mission-medium-selected: #d97706;
+  --v2-mission-stretch: #8b5cf6;
+  --v2-mission-stretch-selected: #7c3aed;
+  --v2-finish-call: #f97316;
+  --v2-finish-call-dark: #ea580c;
+}
+
+@keyframes v2-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gentle nudge for green (start/retry) and red (end call) buttons */
+@keyframes v2-btn-nudge-green {
+  0%, 100% {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(0, 207, 185, 0.4), 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+}
+
+@keyframes v2-btn-nudge-red {
+  0%, 100% {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(234, 77, 61, 0.35), 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.v2-ui .v2-btn-nudge-green {
+  animation: v2-btn-nudge-green 2.2s ease-in-out infinite;
+}
+
+.v2-ui .v2-btn-nudge-red {
+  animation: v2-btn-nudge-red 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-ui .v2-btn-nudge-green,
+  .v2-ui .v2-btn-nudge-red {
+    animation: none;
+  }
+  .v2-ui .v2-mission-card-selected {
+    animation: none;
+  }
+}
+
+@keyframes v2-mission-card-wave {
+  0%, 100% {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.v2-ui .v2-mission-card-selected {
+  animation: v2-mission-card-wave 1.8s ease-in-out infinite;
+}

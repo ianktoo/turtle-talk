@@ -16,13 +16,16 @@ Current `public` schema as defined by migrations 001–005. Use this to compare 
 | **support_requests** | user_id, subject, body, status (open/in_progress/resolved). |
 | **weekly_reports** | child_id, week_start, payload (jsonb). Unique (child_id, week_start). |
 | **dinner_questions** | parent_id, child_id, question, theme, status (pending/completed), completed_at. |
+| **call_feedback** | "How was your call?" feedback: child_id, rating (happy/neutral/sad null), dismissed_at, call_ended_at, source, time_to_dismiss_ms. |
 
-## Indexes (002 + 004)
+## Indexes (002 + 004 + 008)
 
 - `missions(child_id, created_at desc)`
 - `missions(child_id, status)`
 - `weekly_reports(child_id, week_start desc)`
 - `dinner_questions(child_id, status)`
+- `call_feedback(child_id)`
+- `call_feedback(dismissed_at desc)`
 
 ## Database function and trigger (005)
 
@@ -38,3 +41,4 @@ Current `public` schema as defined by migrations 001–005. Use this to compare 
 - **feature_flags**: select all; insert/update admin only.
 - **support_requests**: user own; admin all.
 - **weekly_reports**, **dinner_questions**: parent for linked children; admin all.
+- **call_feedback**: permissive `(true)` — app inserts without auth; admin reads via API.

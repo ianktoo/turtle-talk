@@ -19,6 +19,16 @@ export interface ChildMemory {
   topics: string[];
 }
 
+/** Single submission from the "How was your call?" feedback modal. */
+export interface CallFeedbackRecord {
+  childId: string;
+  rating: 'happy' | 'neutral' | 'sad' | null;
+  dismissedAt: string;
+  callEndedAt: string;
+  source: string;
+  timeToDismissMs?: number;
+}
+
 export interface DatabaseService {
   // Missions
   getMissions(childId: string): Promise<Mission[]>;
@@ -45,4 +55,7 @@ export interface DatabaseService {
   getJournals?(childId: string): Promise<Journal[]>;
   addJournal?(childId: string, audioBase64: string): Promise<Journal>;
   deleteJournal?(childId: string, journalId: string): Promise<void>;
+
+  /** Call feedback (optional; Convex only in first phase). */
+  saveCallFeedback?(record: CallFeedbackRecord): Promise<void>;
 }

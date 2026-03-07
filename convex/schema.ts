@@ -21,4 +21,16 @@ export default defineSchema({
     ),
     topics: v.array(v.string()),
   }).index('by_child', ['childId']),
+
+  call_feedback: defineTable({
+    childId: v.string(),
+    rating: v.union(v.literal('happy'), v.literal('neutral'), v.literal('sad'), v.null()),
+    dismissedAt: v.string(),
+    callEndedAt: v.string(),
+    source: v.string(),
+    timeToDismissMs: v.optional(v.number()),
+    createdAt: v.string(),
+  })
+    .index('by_child', ['childId'])
+    .index('by_dismissedAt', ['dismissedAt']),
 });

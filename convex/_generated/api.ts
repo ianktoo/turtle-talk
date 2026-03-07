@@ -18,4 +18,8 @@ export const api = {
     addTopic: 'memory:addTopic' as any,
     clear:    'memory:clear'    as any,
   },
+  callFeedback: {
+    save: 'callFeedback:save' as any,
+    stats: 'callFeedback:stats' as any,
+  },
 } as const;

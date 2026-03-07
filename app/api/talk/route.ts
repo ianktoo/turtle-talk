@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
         console.info('[Shelly] route: stream start');
         logAgent.logEvent('api_talk', 'stream_start', { blobSize: audioFile.size });
         // #region agent log
+        fetch('http://127.0.0.1:7379/ingest/c4e58649-e133-4b9b-91a5-50c962a7060e', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd47add' }, body: JSON.stringify({ sessionId: 'd47add', location: 'app/api/talk/route.ts:stream_start', message: 'route received audio', data: { blobSize: audioFile.size, blobType: audioFile.type }, timestamp: Date.now(), hypothesisId: 'H3' }) }).catch(() => {});
         debugLog({ location: 'app/api/talk/route.ts:stream_start', message: 'route received audio', data: { blobSize: audioFile.size, blobType: audioFile.type }, hypothesisId: 'H3' });
         // #endregion
         // Phase 0: STT first so we can send user_text immediately (UI shows "You said: ..." while LLM runs)
@@ -99,6 +100,9 @@ export async function POST(req: NextRequest) {
         if (!userText.trim()) {
           logAgent.logEvent('api_talk', 'early_exit_empty_user');
           debugLog({ location: 'app/api/talk/route.ts:early_exit', message: 'early exit empty user', hypothesisId: 'H5' });
+          // #region agent log
+          fetch('http://127.0.0.1:7379/ingest/c4e58649-e133-4b9b-91a5-50c962a7060e', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd47add' }, body: JSON.stringify({ sessionId: 'd47add', location: 'app/api/talk/route.ts:early_exit_empty', message: 'closing stream without meta (empty user text)', data: {}, timestamp: Date.now(), hypothesisId: 'H5' }) }).catch(() => {});
+          // #endregion
           console.info('[Shelly] route: empty user text, closing');
           return;
         }
@@ -206,6 +210,9 @@ export async function POST(req: NextRequest) {
         }
         send({ type: 'error', error });
         console.info('[Shelly] route: error sent to client');
+        // #region agent log
+        fetch('http://127.0.0.1:7379/ingest/c4e58649-e133-4b9b-91a5-50c962a7060e', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd47add' }, body: JSON.stringify({ sessionId: 'd47add', location: 'app/api/talk/route.ts:error_sent', message: 'route sent error to client', data: { error }, timestamp: Date.now(), hypothesisId: 'H4' }) }).catch(() => {});
+        // #endregion
       } finally {
         controller.close();
       }
