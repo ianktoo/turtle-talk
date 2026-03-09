@@ -111,6 +111,55 @@ export interface AdminDatabase {
         { child_id: string; placed_count?: number; placed_decorations?: unknown; growth_stage?: number },
         { placed_count?: number; placed_decorations?: unknown; growth_stage?: number; last_unlock_at?: string | null }
       >;
+      child_growth_cycle: TableShape<
+        {
+          child_id: string;
+          missions_completed_in_cycle: number;
+          last_growth_at: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        { child_id: string; missions_completed_in_cycle?: number; last_growth_at?: string | null },
+        { missions_completed_in_cycle?: number; last_growth_at?: string | null }
+      >;
+      child_wish_round: TableShape<
+        {
+          id: string;
+          child_id: string;
+          status: string;
+          parent_honored_option_id: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        { child_id: string; status?: string; parent_honored_option_id?: string | null },
+        { status?: string; parent_honored_option_id?: string | null }
+      >;
+      child_wish_option: TableShape<
+        {
+          id: string;
+          round_id: string;
+          label: string;
+          theme_slug: string;
+          sort_order: number;
+          selected_by_child: boolean;
+          created_at: string;
+        },
+        { round_id: string; label: string; theme_slug: string; sort_order?: number; selected_by_child?: boolean },
+        { label?: string; theme_slug?: string; sort_order?: number; selected_by_child?: boolean }
+      >;
+      parent_notification: TableShape<
+        {
+          id: string;
+          parent_id: string;
+          child_id: string;
+          type: string;
+          payload: Record<string, unknown>;
+          read_at: string | null;
+          created_at: string;
+        },
+        { parent_id: string; child_id: string; type: string; payload?: Record<string, unknown>; read_at?: string | null },
+        { read_at?: string | null }
+      >;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

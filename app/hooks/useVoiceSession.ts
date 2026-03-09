@@ -2,7 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TurtleMood, Message, MissionSuggestion } from '@/lib/speech/types';
-import type { VoiceConversationProvider, VoiceSessionState, VoiceSessionOptions } from '@/lib/speech/voice/types';
+import type {
+  VoiceConversationProvider,
+  VoiceSessionState,
+  VoiceSessionOptions,
+  AppToolCallEvent,
+} from '@/lib/speech/voice/types';
+import { handleAppToolCall } from '@/lib/speech/appTools';
 
 interface UseVoiceSessionOptions extends VoiceSessionOptions {
   onEnd?: () => void;
@@ -10,6 +16,8 @@ interface UseVoiceSessionOptions extends VoiceSessionOptions {
   onChildName?: (name: string) => void;
   onTopic?: (topic: string) => void;
   onMessagesChange?: (msgs: Message[]) => void;
+  /** When true, call start() once after subscribing so the call starts without user tapping. */
+  autoConnect?: boolean;
 }
 
 interface UseVoiceSessionResult {
@@ -20,6 +28,7 @@ interface UseVoiceSessionResult {
   pendingUserTranscript: string | null;
   isMuted: boolean;
   error: string | null;
+  isMeaningful: boolean;
   startListening: () => Promise<void>;
   toggleMute: () => void;
   endConversation: () => void;
@@ -39,14 +48,32 @@ export function useVoiceSession(
   const [pendingUserTranscript, setPendingUserTranscript] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMeaningful, setIsMeaningful] = useState(false);
+  const callStartRef = useRef<number | null>(null);
+  const meaningfulTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoConnectDoneRef = useRef(false);
 
   // Keep option callbacks in refs so event handlers never go stale
   const optsRef = useRef(options);
   useEffect(() => { optsRef.current = options; });
 
-  // Register provider event listeners once (re-run only if provider instance changes)
+  // Register provider event listeners once (re-run only if provider instance changes).
+  // When autoConnect is true, start the call after listeners are attached so we never miss state updates.
   useEffect(() => {
-    const onState  = (s: VoiceSessionState) => setState(s);
+    const ACTIVE_STATES = new Set(['listening', 'recording', 'processing', 'speaking']);
+    const onState = (s: VoiceSessionState) => {
+      setState(s);
+      if (ACTIVE_STATES.has(s) && callStartRef.current === null) {
+        callStartRef.current = Date.now();
+        meaningfulTimerRef.current = setTimeout(() => setIsMeaningful(true), 40_000);
+      }
+      if (s === 'ended' || s === 'idle') {
+        if (meaningfulTimerRef.current) clearTimeout(meaningfulTimerRef.current);
+        meaningfulTimerRef.current = null;
+        callStartRef.current = null;
+        // keep isMeaningful true until next call so gold state persists to post-call bar
+      }
+    };
     const onMood   = (m: TurtleMood) => setMood(m);
     const onMsgs   = (msgs: Message[]) => {
       setMessages(msgs);
@@ -57,8 +84,11 @@ export function useVoiceSession(
     const onChoices = (choices: MissionSuggestion[]) => optsRef.current.onMissionChoices?.(choices);
     const onName    = (name: string) => optsRef.current.onChildName?.(name);
     const onTopic   = (topic: string) => optsRef.current.onTopic?.(topic);
+    const onAppTool = (call: AppToolCallEvent) => {
+      void handleAppToolCall(call);
+    };
     const onError   = (msg: string) => {
-      console.info('[Shelly] error from provider:', msg ? 'received' : 'empty');
+      console.info('[Shelly] error from provider:', msg || '(empty)');
       setError(msg);
     };
     const onEnd     = () => optsRef.current.onEnd?.();
@@ -70,8 +100,26 @@ export function useVoiceSession(
     provider.on('missionChoices',  onChoices);
     provider.on('childName',      onName);
     provider.on('topic',          onTopic);
+    provider.on('appToolCall',   onAppTool);
     provider.on('error',          onError);
     provider.on('end',            onEnd);
+
+    const autoConnect = optsRef.current.autoConnect;
+    if (autoConnect && !autoConnectDoneRef.current) {
+      autoConnectDoneRef.current = true;
+      queueMicrotask(() => {
+        const opts = optsRef.current;
+        setError(null);
+        setIsMeaningful(false);
+        provider.start({
+          childName:         opts.childName,
+          topics:            opts.topics,
+          initialMessages:   opts.initialMessages,
+          difficultyProfile: opts.difficultyProfile,
+          activeMission:     opts.activeMission,
+        }).catch(() => {});
+      });
+    }
 
     return () => {
       provider.off('stateChange',     onState);
@@ -81,16 +129,19 @@ export function useVoiceSession(
       provider.off('missionChoices',  onChoices);
       provider.off('childName',      onName);
       provider.off('topic',          onTopic);
+      provider.off('appToolCall',   onAppTool);
       provider.off('error',          onError);
       provider.off('end',            onEnd);
       // Clean up the provider when unmounting or when provider changes
       provider.stop();
+      if (meaningfulTimerRef.current) clearTimeout(meaningfulTimerRef.current);
     };
   }, [provider]);
 
   const startListening = useCallback(async () => {
     console.info('[Shelly] startListening called');
     setError(null);
+    setIsMeaningful(false);
     const opts = optsRef.current;
     await provider.start({
       childName:         opts.childName,
@@ -112,5 +163,5 @@ export function useVoiceSession(
     provider.stop();
   }, [provider]);
 
-  return { state, mood, messages, pendingUserTranscript, isMuted, error, startListening, toggleMute, endConversation };
+  return { state, mood, messages, pendingUserTranscript, isMuted, error, isMeaningful, startListening, toggleMute, endConversation };
 }

@@ -10,8 +10,8 @@ import { useWishList } from '@/app/hooks/useWishList';
 import ChildLoginModal from '@/app/components/ChildLoginModal';
 import ChristmasTree from '@/app/appreciation/ChristmasTree';
 import DecorationBox from '@/app/appreciation/DecorationBox';
-
-const DUMMY_TREE = { growth_stage: 0, placed_count: 0, placed_decorations: [] as { emoji: string; slotId: string }[] };
+import { useLocalTree } from '@/app/hooks/useLocalTree';
+import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
 
 const TREE_SLOTS = 10;
 
@@ -38,24 +38,39 @@ function AppreciationPageInner() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [decorationModalOpen, setDecorationModalOpen] = useState(false);
 
+  // Guest (no-login) path — localStorage tree + mission-earned decorations
+  const { childName } = usePersonalMemory();
+  const {
+    placedDecorations: localPlacedDecorations,
+    unplacedDecorations,
+    placedCount: localPlacedCount,
+    growthStage: localGrowthStage,
+    placeDecoration,
+  } = useLocalTree();
+
   // Open decoration picker when nav gift link is used (?open=decorate)
   useEffect(() => {
     if (searchParams.get('open') === 'decorate') setDecorationModalOpen(true);
   }, [searchParams]);
 
   const isGuest = !child;
-  const treeState = isGuest ? DUMMY_TREE : (tree ?? null);
-  const growthStage = treeState?.growth_stage ?? 0;
-  const placedDecorations = treeState?.placed_decorations ?? [];
-  const displayItems = isGuest ? [] : encouragementItems;
-  const placedCount = treeState?.placed_count ?? 0;
+  const growthStage = isGuest ? localGrowthStage : (tree?.growth_stage ?? 0);
+  const placedDecorations = isGuest ? localPlacedDecorations : (tree?.placed_decorations ?? []);
+  const placedCount = isGuest ? localPlacedCount : (tree?.placed_count ?? 0);
+  const displayItems: { id: string; emoji: string }[] = isGuest ? unplacedDecorations : encouragementItems;
 
   const handlePlaceOnTree = useCallback(
-    async (encouragementId: string) => {
-      if (isPlacing || isGuest) return;
+    async (itemId: string) => {
+      if (isPlacing) return;
+      if (isGuest) {
+        placeDecoration(itemId);
+        setSelectedEncouragementId(null);
+        setDecorationModalOpen(false);
+        return;
+      }
       setIsPlacing(true);
       try {
-        const result = await placeOnTree(encouragementId);
+        const result = await placeOnTree(itemId);
         setSelectedEncouragementId(null);
         refetchTree();
         refetchEncouragement();
@@ -67,7 +82,7 @@ function AppreciationPageInner() {
         setIsPlacing(false);
       }
     },
-    [isPlacing, isGuest, placeOnTree, refetchTree, refetchEncouragement, refetchWishList]
+    [isPlacing, isGuest, placeDecoration, placeOnTree, refetchTree, refetchEncouragement, refetchWishList]
   );
 
   const progressPercent = Math.min(100, (placedCount / TREE_SLOTS) * 100);
@@ -111,7 +126,7 @@ function AppreciationPageInner() {
               letterSpacing: '-0.02em',
             }}
           >
-            My Tree
+            {isGuest ? `${childName ?? 'Explorer'}'s Tree` : 'My Tree'}
           </h1>
           <div style={{ position: 'relative' }}>
             <button
@@ -209,7 +224,7 @@ function AppreciationPageInner() {
               maxWidth: 280,
             }}
           >
-            Decorate it with cheers from your grown-up!
+            {isGuest ? 'Decorate it with your mission rewards!' : 'Decorate it with cheers from your grown-up!'}
           </p>
           <div
             style={{
@@ -313,74 +328,90 @@ function AppreciationPageInner() {
               borderTop: '1px solid rgba(255,255,255,0.12)',
             }}
           >
-            <h2
-              style={{
-                margin: '0 0 12px',
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                color: 'var(--tt-text-primary)',
-                textAlign: 'center',
-              }}
-            >
-              My Wish List
-            </h2>
-            <p
-              style={{
-                margin: '0 0 16px',
-                fontSize: '0.85rem',
-                color: 'var(--tt-text-secondary)',
-                textAlign: 'center',
-              }}
-            >
-              Fill your tree to unlock wishes!
-            </p>
-            {!isGuest && wishListLoading ? (
-              <p style={{ color: 'var(--tt-text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
-                Loading…
-              </p>
-            ) : wishListItems.length === 0 ? (
+            {isGuest ? (
               <p
                 style={{
                   color: 'var(--tt-text-secondary)',
                   fontSize: '0.9rem',
                   textAlign: 'center',
-                  lineHeight: 1.5,
+                  lineHeight: 1.6,
+                  margin: 0,
                 }}
               >
-                Your grown-up can add wishes for you. Decorate your tree to unlock them!
+                Complete more missions with Shelly to earn more decorations!
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {wishListItems.map((item) => {
-                  const locked = !item.unlocked_at;
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: '14px 18px',
-                        borderRadius: 14,
-                        background: locked
-                          ? 'rgba(255,255,255,0.06)'
-                          : 'rgba(34,197,94,0.18)',
-                        border: locked
-                          ? '1px solid rgba(255,255,255,0.15)'
-                          : '2px solid rgba(34,197,94,0.45)',
-                        color: locked ? 'var(--tt-text-secondary)' : 'var(--tt-text-primary)',
-                        fontSize: '1rem',
-                        fontWeight: locked ? 500 : 600,
-                      }}
-                    >
-                      {locked ? (
-                        <Lock size={20} style={{ flexShrink: 0, opacity: 0.8 }} aria-hidden />
-                      ) : null}
-                      <span>{locked ? '???' : item.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <h2
+                  style={{
+                    margin: '0 0 12px',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    color: 'var(--tt-text-primary)',
+                    textAlign: 'center',
+                  }}
+                >
+                  My Wish List
+                </h2>
+                <p
+                  style={{
+                    margin: '0 0 16px',
+                    fontSize: '0.85rem',
+                    color: 'var(--tt-text-secondary)',
+                    textAlign: 'center',
+                  }}
+                >
+                  Fill your tree to unlock wishes!
+                </p>
+                {wishListLoading ? (
+                  <p style={{ color: 'var(--tt-text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
+                    Loading…
+                  </p>
+                ) : wishListItems.length === 0 ? (
+                  <p
+                    style={{
+                      color: 'var(--tt-text-secondary)',
+                      fontSize: '0.9rem',
+                      textAlign: 'center',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Your grown-up can add wishes for you. Decorate your tree to unlock them!
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {wishListItems.map((item) => {
+                      const locked = !item.unlocked_at;
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '14px 18px',
+                            borderRadius: 14,
+                            background: locked
+                              ? 'rgba(255,255,255,0.06)'
+                              : 'rgba(34,197,94,0.18)',
+                            border: locked
+                              ? '1px solid rgba(255,255,255,0.15)'
+                              : '2px solid rgba(34,197,94,0.45)',
+                            color: locked ? 'var(--tt-text-secondary)' : 'var(--tt-text-primary)',
+                            fontSize: '1rem',
+                            fontWeight: locked ? 500 : 600,
+                          }}
+                        >
+                          {locked ? (
+                            <Lock size={20} style={{ flexShrink: 0, opacity: 0.8 }} aria-hidden />
+                          ) : null}
+                          <span>{locked ? '???' : item.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </section>
         </div>
@@ -435,6 +466,7 @@ function AppreciationPageInner() {
                 onSelect={setSelectedEncouragementId}
                 onPlaceOnTree={handlePlaceOnTree}
                 isPlacing={isPlacing}
+                emptyMessage={isGuest ? 'Complete a mission to earn your first decoration!' : undefined}
               />
               <button
                 type="button"

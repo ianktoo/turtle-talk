@@ -103,12 +103,33 @@ export default function MissionSelectView({ choices, onSelect, onDismiss }: Miss
         onClick={onDismiss}
         style={{
           marginTop: 8,
+          padding: '14px 28px',
+          borderRadius: 9999,
+          border: 'none',
+          background: 'linear-gradient(135deg, #b45309, #d97706)',
+          color: 'white',
+          fontSize: '1rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(217, 119, 6, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+        }}
+      >
+        Missions
+      </button>
+      <button
+        onClick={onDismiss}
+        style={{
+          marginTop: 8,
           padding: '12px 28px',
           borderRadius: 24,
           border: '1px solid rgba(255,255,255,0.3)',
           background: 'rgba(255,255,255,0.12)',
           color: 'rgba(255,255,255,0.85)',
-          fontSize: '1rem',
+          fontSize: '0.9375rem',
           fontWeight: 600,
           cursor: 'pointer',
           display: 'flex',
@@ -116,7 +137,7 @@ export default function MissionSelectView({ choices, onSelect, onDismiss }: Miss
           gap: 8,
         }}
       >
-        <X size={16} strokeWidth={2.5} /> Maybe later 🌊
+        <X size={16} strokeWidth={2.5} /> Maybe later
       </button>
     </main>
   );

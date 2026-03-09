@@ -147,11 +147,11 @@ body {
 
 /* Cloud drift */
 @keyframes cloudDrift1 {
-  from { transform: translateX(-60vw); }
+  from { transform: translateX(-30vw); }
   to   { transform: translateX(100vw); }
 }
 @keyframes cloudDrift2 {
-  from { transform: translateX(-45vw); }
+  from { transform: translateX(-22vw); }
   to   { transform: translateX(100vw); }
 }
 

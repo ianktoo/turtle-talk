@@ -9,6 +9,7 @@ import { getSupabaseAdminOptional } from '@/lib/supabase/server-admin';
 import { getChildSessionCookieName, parseChildSessionCookieValue } from '@/lib/child-session';
 
 const DECORATIONS_TO_UNLOCK = 10;
+const MAX_DECORATIONS_ON_TREE = 15;
 
 export async function POST(request: NextRequest) {
   const cookieValue = request.cookies.get(getChildSessionCookieName())?.value;
@@ -68,6 +69,9 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   const placedDecorations = (existing?.placed_decorations as { emoji: string; slotId: string }[] | null) ?? [];
+  if (placedDecorations.length >= MAX_DECORATIONS_ON_TREE) {
+    return NextResponse.json({ error: 'Tree is full (max 15 decorations)' }, { status: 400 });
+  }
   const newSlotId = `slot-${placedDecorations.length}`;
   const newPlaced = [...placedDecorations, { emoji: enc.emoji, slotId: newSlotId }];
   let newCount = (existing?.placed_count ?? 0) + 1;

@@ -3,7 +3,6 @@
 import type { Message, MissionSuggestion, TurtleMood } from '../types';
 import type { VoiceSessionOptions, VoiceSessionState } from './types';
 import { BaseVoiceProvider } from './base';
-import { debugLog } from '../debug-log';
 
 const VAD_THRESHOLD = 35;      // ambient noise sits at 8-20, real speech at 40+
 const VAD_START_MS = 150;      // silence must turn to sound for this long
@@ -173,16 +172,10 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
   private async sendAudio(blob: Blob): Promise<void> {
     if (blob.size < MIN_AUDIO_BYTES) {
       console.info('[Shelly] native: blob too small, back to listening');
-      // #region agent log
-      debugLog({ location: 'lib/speech/voice/native.ts:blob_too_small', message: 'client dropped blob', data: { blobSize: blob.size, minRequired: MIN_AUDIO_BYTES }, hypothesisId: 'H3' });
-      // #endregion
       this.transitionToListening();
       return;
     }
 
-    // #region agent log
-    debugLog({ location: 'lib/speech/voice/native.ts:send_audio', message: 'client sending audio', data: { blobSize: blob.size, blobType: blob.type }, hypothesisId: 'H3' });
-    // #endregion
     console.info('[Shelly] native: processing (request to /api/talk)');
     this.setState('processing');
     this.emit('moodChange', 'confused');
@@ -279,9 +272,6 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
 
       // Single place for "stream ended" recovery: avoid duplicate emissions, keep state/mood in sync
       if (!receivedMeta && this.state === 'processing') {
-        // #region agent log
-        debugLog({ location: 'lib/speech/voice/native.ts:no_meta', message: 'stream ended without meta', hypothesisId: 'H5' });
-        // #endregion
         console.info('[Shelly] native: stream ended without meta, back to listening');
         this.transitionToListening();
       } else if (this.state === 'speaking') {

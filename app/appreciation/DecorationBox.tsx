@@ -1,13 +1,17 @@
 'use client';
 
-import type { EncouragementItem } from '@/app/hooks/useEncouragement';
+interface DecorationItem {
+  id: string;
+  emoji: string;
+}
 
 interface DecorationBoxProps {
-  items: EncouragementItem[];
+  items: DecorationItem[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onPlaceOnTree: (encouragementId: string) => void;
   isPlacing: boolean;
+  emptyMessage?: string;
 }
 
 export default function DecorationBox({
@@ -16,6 +20,7 @@ export default function DecorationBox({
   onSelect,
   onPlaceOnTree,
   isPlacing,
+  emptyMessage,
 }: DecorationBoxProps) {
   return (
     <div
@@ -52,7 +57,7 @@ export default function DecorationBox({
       >
         {items.length === 0 ? (
           <p style={{ fontSize: '0.85rem', color: 'var(--tt-text-secondary)', margin: 0, textAlign: 'center' }}>
-            No new cheers yet — ask your grown-up to send you some!
+            {emptyMessage ?? 'No new cheers yet — ask your grown-up to send you some!'}
           </p>
         ) : (
           items.map((item) => (

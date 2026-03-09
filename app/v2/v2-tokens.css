@@ -1,0 +1,225 @@
+/* V2 Child UI — design tokens (light theme) */
+
+.v2-ui {
+  color-scheme: light;
+  color: var(--v2-text-primary);
+  background-color: var(--v2-bg);
+  scroll-behavior: smooth;
+  --v2-primary: #00CFB9;
+  --v2-primary-dark: #00b8a3;
+  --v2-bg: rgba(255, 245, 193, 0.4);
+  --v2-surface: #ffffff;
+  --v2-glass: rgba(255, 255, 255, 0.72);
+  --v2-glass-border: rgba(255, 255, 255, 0.5);
+  --v2-glass-strong: rgba(255, 255, 255, 0.88);
+  --v2-text-primary: #1a1a1a;
+  --v2-text-secondary: #555555;
+  --v2-text-muted: #777777;
+  --v2-radius-pill: 9999px;
+  --v2-radius-card: 16px;
+  --v2-shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --v2-shadow-menu: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --v2-transition-fast: 0.15s ease;
+  --v2-transition-spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --v2-touch-min: 44px;
+  --v2-end-call-red: #ea4d3d;
+  --v2-bubble-user-bg: #eee;
+  --v2-status-ok: #22c55e;
+  --v2-status-warning: #eab308;
+  --v2-status-error: #dc2626;
+  --v2-gold: #d97706;
+  --v2-gold-dark: #b45309;
+  --v2-mission-easy: #22c55e;
+  --v2-mission-easy-selected: #16a34a;
+  --v2-mission-medium: #f59e0b;
+  --v2-mission-medium-selected: #d97706;
+  --v2-mission-stretch: #8b5cf6;
+  --v2-mission-stretch-selected: #7c3aed;
+  --v2-finish-call: #f97316;
+  --v2-finish-call-dark: #ea580c;
+}
+
+/* V2 page entry animation */
+@keyframes v2-page-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.v2-ui .v2-page-shell {
+  animation: v2-page-fade 0.25s var(--v2-transition-fast);
+}
+
+@media (prefers-color-scheme: dark) {
+  .v2-ui {
+    color-scheme: dark;
+    --v2-bg: rgba(2, 6, 23, 0.5);
+    --v2-surface: #020617;
+    --v2-glass: rgba(15, 23, 42, 0.94);
+    --v2-glass-border: rgba(148, 163, 184, 0.55);
+    --v2-glass-strong: rgba(15, 23, 42, 0.98);
+    --v2-text-primary: #f9fafb;
+    --v2-text-secondary: #e5e7eb;
+    --v2-text-muted: #9ca3af;
+    --v2-bubble-user-bg: #0f172a;
+    --v2-shadow-card: 0 18px 45px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(15, 23, 42, 0.9);
+    --v2-shadow-menu: 0 22px 55px rgba(0, 0, 0, 0.95);
+  }
+}
+
+@keyframes v2-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gentle nudge for green (start/retry) and red (end call) buttons */
+@keyframes v2-btn-nudge-green {
+  0%, 100% {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(0, 207, 185, 0.4), 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+}
+
+@keyframes v2-btn-nudge-red {
+  0%, 100% {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(234, 77, 61, 0.35), 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.v2-ui .v2-btn-nudge-green {
+  animation: v2-btn-nudge-green 2.2s ease-in-out infinite;
+}
+
+.v2-ui .v2-btn-nudge-red {
+  animation: v2-btn-nudge-red 2.5s ease-in-out infinite;
+}
+
+/* Primary pill CTA with subtle radial depth for Tap to speak */
+.v2-ui .v2-btn-primary-pill {
+  background: linear-gradient(135deg, var(--v2-primary) 0%, var(--v2-primary-dark) 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.1);
+  border-radius: var(--v2-radius-pill);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-ui .v2-page-shell {
+    animation: none;
+    transform: none;
+  }
+  .v2-ui .v2-btn-nudge-green,
+  .v2-ui .v2-btn-nudge-red {
+    animation: none;
+  }
+  .v2-ui .v2-mission-card-selected {
+    animation: none;
+  }
+}
+
+@keyframes v2-mission-card-wave {
+  0%, 100% {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.v2-ui .v2-mission-card-selected {
+  animation: v2-mission-card-wave 1.8s ease-in-out infinite;
+}
+
+/* V2 talk conversation bubbles: auto-scroll container and thinking animation */
+
+.v2-ui .v2-talk-bubbles-scroll {
+  /* keep scrolling active but hide scrollbar by default */
+  scrollbar-width: none; /* Firefox */
+}
+
+.v2-ui .v2-talk-bubbles-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.v2-ui .v2-talk-bubbles-scroll:hover {
+  scrollbar-width: thin;
+}
+
+.v2-ui .v2-talk-bubbles-scroll:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+@keyframes v2-thinking-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.v2-ui .v2-thinking-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.v2-ui .v2-thinking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--v2-text-secondary);
+  opacity: 0.7;
+  animation: v2-thinking-dot 1.2s ease-in-out infinite;
+}
+
+.v2-ui .v2-thinking-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.v2-ui .v2-thinking-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Kid-friendly connecting / pre-first-voice animation */
+@keyframes v2-shelly-bob {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.v2-ui .v2-shelly-connecting {
+  animation: v2-shelly-bob 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-ui .v2-shelly-connecting {
+    animation: none;
+  }
+}

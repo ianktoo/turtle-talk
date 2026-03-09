@@ -114,9 +114,9 @@ export default function Scene() {
       {/* Clouds — full SVG sprite drifting as wide layers */}
       <CloudLayer
         style={{
-          top: "5%",
+          top: "-5%",
           left: 0,
-          width: "60vw",
+          width: "30vw",
           height: "auto",
           animation: `cloudDrift1 60s linear infinite`,
           opacity: 0.9,
@@ -124,9 +124,9 @@ export default function Scene() {
       />
       <CloudLayer
         style={{
-          top: "15%",
+          top: "4%",
           left: 0,
-          width: "45vw",
+          width: "22vw",
           height: "auto",
           animation: `cloudDrift2 80s linear infinite`,
           animationDelay: "-30s",

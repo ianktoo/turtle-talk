@@ -16,6 +16,7 @@ export type { DatabaseService };
 export type { ChildMemory, Journal } from './types';
 
 let _instance: DatabaseService | null = null;
+let _guestInstance: DatabaseService | null = null;
 
 export function getDb(): DatabaseService {
   if (_instance) return _instance;
@@ -35,6 +36,17 @@ export function getDb(): DatabaseService {
   }
 
   return _instance!;
+}
+
+/**
+ * Database for guest (no logged-in child). Always uses localStorage so guest
+ * missions and memory persist on this device regardless of NEXT_PUBLIC_DB_PROVIDER.
+ */
+export function getGuestDb(): DatabaseService {
+  if (_guestInstance) return _guestInstance;
+  const { LocalStorageDatabaseService } = require('./providers/localStorage');
+  _guestInstance = new LocalStorageDatabaseService();
+  return _guestInstance;
 }
 
 /**

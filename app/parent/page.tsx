@@ -18,6 +18,29 @@ import booksData from '@/app/placeholders/books.json';
 
 const books = booksData as Book[];
 
+interface ParentNotification {
+  id: string;
+  childId: string;
+  type: string;
+  payload: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+}
+
+interface WishRoundOption {
+  id: string;
+  label: string;
+  theme_slug: string;
+}
+
+interface WishRound {
+  id: string;
+  status: string;
+  parentHonoredOptionId: string | null;
+  createdAt: string;
+  selectedOptions: WishRoundOption[];
+}
+
 function getWeekOptions(): { value: string; label: string }[] {
   const options = [];
   const today = new Date();
@@ -46,6 +69,9 @@ export default function ParentPage() {
   const [wishListError, setWishListError] = useState<string | null>(null);
   const [confirmWishId, setConfirmWishId] = useState<string | null>(null);
   const [encouragementSending, setEncouragementSending] = useState(false);
+  const [notifications, setNotifications] = useState<ParentNotification[]>([]);
+  const [wishRound, setWishRound] = useState<WishRound | null>(null);
+  const [honorLoading, setHonorLoading] = useState(false);
 
   const { items: wishListItems, isLoading: wishListLoading, refetch: refetchWishList } = useWishList(activeChild?.id ?? null);
   const { addItem: addWishItem, deleteItem: deleteWishItem } = useWishListMutations(activeChild?.id, refetchWishList);
@@ -111,6 +137,41 @@ export default function ParentPage() {
   useEffect(() => {
     fetchDinnerQuestions();
   }, [fetchDinnerQuestions]);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch('/api/parent/notifications', { credentials: 'include' });
+      const data = res.ok ? await res.json() : null;
+      setNotifications((data?.notifications ?? []) as ParentNotification[]);
+    } catch {
+      setNotifications([]);
+    }
+  }, []);
+
+  const fetchWishRound = useCallback(async () => {
+    if (!activeChild?.id) {
+      setWishRound(null);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/parent/wish-rounds?childId=${encodeURIComponent(activeChild.id)}`,
+        { credentials: 'include' }
+      );
+      const data = res.ok ? await res.json() : null;
+      setWishRound((data?.wishRound ?? null) as WishRound | null);
+    } catch {
+      setWishRound(null);
+    }
+  }, [activeChild?.id]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    fetchWishRound();
+  }, [fetchWishRound]);
 
   const weeklySummary = weeklyReport ?? undefined;
   const practicedAreaIds = weeklySummary?.areas?.map((a: { id: string }) => a.id) ?? [];
@@ -220,6 +281,111 @@ export default function ParentPage() {
               </p>
             </div>
           </div>
+
+          {/* Notifications */}
+          {notifications.length > 0 && (
+            <div className="pd-card-elevated" style={{ padding: 24 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--pd-text-primary)', margin: '0 0 12px', letterSpacing: '-0.02em' }}>
+                Notifications
+              </h2>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {notifications.slice(0, 10).map((n) => (
+                  <li
+                    key={n.id}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      background: n.readAt ? 'var(--pd-surface-soft)' : 'var(--pd-accent-soft)',
+                      border: `1px solid ${n.readAt ? 'var(--pd-card-border)' : 'var(--pd-accent-border)'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ fontSize: 15, color: 'var(--pd-text-primary)' }}>
+                      {n.type === 'growth_moment' && `${(n.payload?.childName as string) ?? 'Your child'} had a growth moment! Pick 3 wishes with them in the Garden.`}
+                      {n.type === 'child_picked_wishes' && `${(n.payload?.childName as string) ?? 'Your child'} picked 3 wishes. Choose one to honor below.`}
+                      {!['growth_moment', 'child_picked_wishes'].includes(n.type) && ((n.payload?.text as string) ?? n.type)}
+                    </span>
+                    {!n.readAt && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await fetch(`/api/parent/notifications/${n.id}`, {
+                            method: 'PATCH',
+                            credentials: 'include',
+                          });
+                          fetchNotifications();
+                        }}
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: 12,
+                          borderRadius: 8,
+                          border: 'none',
+                          background: 'var(--pd-accent)',
+                          color: 'white',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Mark read
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Choose one wish to honor */}
+          {wishRound && (wishRound.status === 'child_picked' || wishRound.status === 'parent_choosing') && wishRound.selectedOptions.length === 3 && (
+            <div className="pd-card-elevated" style={{ padding: 24, border: '2px solid var(--pd-accent)' }}>
+              <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--pd-text-primary)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                Choose one wish to honor
+              </h2>
+              <p style={{ fontSize: 15, color: 'var(--pd-text-secondary)', margin: '0 0 14px' }}>
+                {activeChild?.name} picked these 3 wishes. Choose one to make come true — they&apos;ll get a decoration on their tree!
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {wishRound.selectedOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    disabled={honorLoading}
+                    onClick={async () => {
+                      setHonorLoading(true);
+                      try {
+                        const res = await fetch(`/api/wishes/rounds/${wishRound.id}/honor`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ optionId: opt.id }),
+                        });
+                        if (res.ok) {
+                          fetchWishRound();
+                          fetchNotifications();
+                        }
+                      } finally {
+                        setHonorLoading(false);
+                      }
+                    }}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: 12,
+                      border: '1px solid var(--pd-card-border)',
+                      background: 'var(--pd-surface-soft)',
+                      fontSize: 15,
+                      color: 'var(--pd-text-primary)',
+                      cursor: honorLoading ? 'wait' : 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    🎁 {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Week + Weekly summary card */}
           <div className="pd-card" style={{ padding: 24 }}>

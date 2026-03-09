@@ -10,7 +10,7 @@
  */
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '../../../convex/_generated/api';
-import type { DatabaseService, ChildMemory, Mission, MissionSuggestion } from '../types';
+import type { DatabaseService, ChildMemory, Mission, MissionSuggestion, CallFeedbackRecord } from '../types';
 
 function getClient(): ConvexHttpClient {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -59,5 +59,16 @@ export class ConvexDatabaseService implements DatabaseService {
 
   async clearMemory(childId: string): Promise<void> {
     await this.client.mutation(api.memory.clear, { childId });
+  }
+
+  async saveCallFeedback(record: CallFeedbackRecord): Promise<void> {
+    await this.client.mutation(api.callFeedback.save, {
+      childId: record.childId,
+      rating: record.rating,
+      dismissedAt: record.dismissedAt,
+      callEndedAt: record.callEndedAt,
+      source: record.source,
+      ...(record.timeToDismissMs != null && { timeToDismissMs: record.timeToDismissMs }),
+    });
   }
 }

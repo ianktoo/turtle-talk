@@ -9,7 +9,7 @@
  * RLS: permissive (using (true)) — no auth required in first phase.
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { DatabaseService, ChildMemory, Mission, MissionSuggestion } from '../types';
+import type { DatabaseService, ChildMemory, Mission, MissionSuggestion, CallFeedbackRecord } from '../types';
 
 function getClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -120,6 +120,34 @@ export class SupabaseDatabaseService implements DatabaseService {
       .delete()
       .eq('child_id', childId);
     if (error) throw error;
+  }
+
+  async saveCallFeedback(record: CallFeedbackRecord): Promise<void> {
+    const row = {
+      child_id: record.childId,
+      rating: record.rating,
+      dismissed_at: record.dismissedAt,
+      call_ended_at: record.callEndedAt,
+      source: record.source,
+      ...(record.timeToDismissMs != null && { time_to_dismiss_ms: record.timeToDismissMs }),
+    };
+    const { error } = await this.db.from('call_feedback').insert(row);
+    if (error) {
+      const isTableMissing =
+        error.code === '42P01' ||
+        error.code === 'PGRST205' ||
+        (error as { message?: string }).message?.includes("call_feedback") &&
+          (error as { message?: string }).message?.includes('does not exist');
+      if (isTableMissing) {
+        // Table hasn't been created in this Supabase project yet — degrade gracefully.
+        // Admins can apply supabase/migrations/008_call_feedback.sql to enable persistence.
+        console.warn(
+          '[Supabase] call_feedback table not found. Run supabase/migrations/008_call_feedback.sql in your Supabase project.',
+        );
+        return;
+      }
+      throw error;
+    }
   }
 
   private async upsertMemory(childId: string, patch: Record<string, unknown>): Promise<void> {

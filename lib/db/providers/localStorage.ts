@@ -57,7 +57,7 @@ export class LocalStorageDatabaseService implements DatabaseService {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: suggestion.title,
       description: suggestion.description,
-      theme: suggestion.theme,
+      theme: suggestion.theme ?? 'curious',
       difficulty: suggestion.difficulty,
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -155,4 +155,128 @@ export class LocalStorageDatabaseService implements DatabaseService {
       journals.filter((j) => j.id !== journalId),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Tree decoration helpers (localStorage-only, not on DatabaseService interface)
+// ---------------------------------------------------------------------------
+
+/** Client-only: must only be called from 'use client' contexts. */
+export function getPlacedMissionIds(childId: string): string[] {
+  return readJSON<string[]>(key(childId, 'placedmissions'), []);
+}
+
+/** Client-only: must only be called from 'use client' contexts. */
+export function savePlacedMissionIds(childId: string, ids: string[]): void {
+  writeJSON(key(childId, 'placedmissions'), ids);
+}
+
+// ---------------------------------------------------------------------------
+// Guest wish demo (no login)
+// ---------------------------------------------------------------------------
+
+export interface GuestWishOption {
+  id: string;
+  label: string;
+  theme_slug: string;
+}
+
+const GUEST_WISH_OPTIONS_KEY = 'turtle-talk-guest-wish-options';
+const GUEST_WISH_SELECTED_KEY = 'turtle-talk-guest-wish-selected';
+const GUEST_WISH_COMPLETED_KEY = 'turtle-talk-guest-wish-completed';
+
+export function getGuestWishOptions(): GuestWishOption[] {
+  return readJSON<GuestWishOption[]>(GUEST_WISH_OPTIONS_KEY, []);
+}
+
+export function saveGuestWishOptions(options: GuestWishOption[]): void {
+  writeJSON(GUEST_WISH_OPTIONS_KEY, options);
+}
+
+export function getGuestWishSelected(): string[] {
+  return readJSON<string[]>(GUEST_WISH_SELECTED_KEY, []);
+}
+
+export function saveGuestWishSelected(ids: string[]): void {
+  writeJSON(GUEST_WISH_SELECTED_KEY, ids);
+}
+
+export function getGuestWishCompleted(): boolean {
+  return readJSON<boolean>(GUEST_WISH_COMPLETED_KEY, false);
+}
+
+export function saveGuestWishCompleted(completed: boolean): void {
+  writeJSON(GUEST_WISH_COMPLETED_KEY, completed);
+}
+
+export function resetGuestWishes(): void {
+  try {
+    localStorage.removeItem(GUEST_WISH_OPTIONS_KEY);
+    localStorage.removeItem(GUEST_WISH_SELECTED_KEY);
+    localStorage.removeItem(GUEST_WISH_COMPLETED_KEY);
+  } catch { /* ignore */ }
+}
+
+// ---------------------------------------------------------------------------
+// Guest demo: show growth moment (star on tree) for simulation
+// ---------------------------------------------------------------------------
+
+const GUEST_DEMO_STAR_KEY = 'turtle-talk-guest-demo-star';
+
+export function getGuestDemoStar(): boolean {
+  return readJSON<boolean>(GUEST_DEMO_STAR_KEY, false);
+}
+
+export function setGuestDemoStar(value: boolean): void {
+  writeJSON(GUEST_DEMO_STAR_KEY, value);
+}
+
+// ---------------------------------------------------------------------------
+// Guest demo: add demo decorations (completed missions) for decorate flow
+// ---------------------------------------------------------------------------
+
+const DEMO_MISSION_PREFIX = 'guest-demo-';
+
+/** Adds 3 completed demo missions for the default/guest child. Call from client only. Skips if demos already exist. */
+export function addDemoMissionsForGuest(): boolean {
+  if (typeof window === 'undefined') return false;
+  const missionsKey = key('default', 'missions');
+  const existing = readJSON<Mission[]>(missionsKey, []);
+  const hasDemos = existing.some((m) => m.id.startsWith(DEMO_MISSION_PREFIX));
+  if (hasDemos) return false;
+  const now = new Date().toISOString();
+  const demos: Mission[] = [
+    {
+      id: `${DEMO_MISSION_PREFIX}brave-${Date.now()}`,
+      title: 'Demo: Be brave',
+      description: 'Try the decorate flow!',
+      theme: 'brave',
+      difficulty: 'easy',
+      status: 'completed',
+      createdAt: now,
+      completedAt: now,
+    },
+    {
+      id: `${DEMO_MISSION_PREFIX}kind-${Date.now()}-1`,
+      title: 'Demo: Be kind',
+      description: 'Place decorations on your tree.',
+      theme: 'kind',
+      difficulty: 'easy',
+      status: 'completed',
+      createdAt: now,
+      completedAt: now,
+    },
+    {
+      id: `${DEMO_MISSION_PREFIX}creative-${Date.now()}`,
+      title: 'Demo: Be creative',
+      description: 'Decorate and grow!',
+      theme: 'creative',
+      difficulty: 'easy',
+      status: 'completed',
+      createdAt: now,
+      completedAt: now,
+    },
+  ];
+  writeJSON(missionsKey, [...demos, ...existing]);
+  return true;
 }
