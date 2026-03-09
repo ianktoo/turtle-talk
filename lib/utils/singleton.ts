@@ -21,11 +21,12 @@ export function pickProvider<T extends string>(
   allowed: readonly T[],
   fallback: T,
 ): T {
-  if (!value) return fallback;
-  if (!(allowed as readonly string[]).includes(value)) {
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+  if (!(allowed as readonly string[]).includes(trimmed)) {
     throw new Error(
       `Unknown provider "${value}" for ${envVar}. Allowed: ${allowed.join(', ')}`,
     );
   }
-  return value as T;
+  return trimmed as T;
 }

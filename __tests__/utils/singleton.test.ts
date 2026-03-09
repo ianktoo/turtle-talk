@@ -34,6 +34,16 @@ describe('pickProvider', () => {
       .toBe('localStorage');
   });
 
+  it('returns the fallback when value is whitespace-only', () => {
+    expect(pickProvider('MY_VAR', '   ', ['localStorage', 'supabase'], 'localStorage'))
+      .toBe('localStorage');
+  });
+
+  it('trims trailing newline from value (Vercel env var quirk)', () => {
+    expect(pickProvider('MY_VAR', 'supabase\n', ['localStorage', 'supabase'], 'localStorage'))
+      .toBe('supabase');
+  });
+
   it('throws a descriptive error for an unknown value', () => {
     expect(() =>
       pickProvider('MY_VAR', 'postgres', ['localStorage', 'supabase', 'convex'], 'localStorage')
