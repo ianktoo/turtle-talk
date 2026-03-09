@@ -134,9 +134,14 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
   private pendingEnd = false;
   private pendingMissions: MissionSuggestion[] | null = null;
   private pendingToolCalls: PendingToolCall[] = [];
+  private gracefulEndTimeout: ReturnType<typeof setTimeout> | null = null;
 
   async start(options: VoiceSessionOptions): Promise<void> {
     const gen = ++this._generation;
+    if (this.gracefulEndTimeout) {
+      clearTimeout(this.gracefulEndTimeout);
+      this.gracefulEndTimeout = null;
+    }
     this.emit('stateChange', 'listening');
     this.emit('moodChange', 'listening');
     this.messages = options.initialMessages ? [...options.initialMessages] : [];
@@ -360,7 +365,16 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
 
     if (this.pendingEnd) {
       this.pendingEnd = false;
-      this.stop();
+      // Give Shelly a brief grace period to finish playing
+      // her final audio before we tear down the call.
+      if (this.gracefulEndTimeout) {
+        clearTimeout(this.gracefulEndTimeout);
+      }
+      this.gracefulEndTimeout = setTimeout(() => {
+        if (this._generation === gen) {
+          this.stop();
+        }
+      }, 2000);
     } else {
       this.emit('stateChange', 'listening');
       this.emit('moodChange', 'listening');
@@ -375,6 +389,10 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
 
   stop(): void {
     this._generation++;
+    if (this.gracefulEndTimeout) {
+      clearTimeout(this.gracefulEndTimeout);
+      this.gracefulEndTimeout = null;
+    }
     this.dc?.close();
     this.dc = null;
     this.pc?.close();

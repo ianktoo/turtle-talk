@@ -8,8 +8,8 @@ import MenuItem from './MenuItem';
 const ITEMS = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/garden', label: 'My Garden', icon: Leaf },
-  { href: '/appreciation/wish-list', label: 'Wish List', icon: Heart },
-  { href: '/talk', label: 'Conversation', icon: MessageCircle },
+  { href: '/wish-list', label: 'Wish List', icon: Heart },
+  { href: '/conversation', label: 'Conversation', icon: MessageCircle },
   { href: '/missions', label: 'Missions', icon: Flag },
   { href: '/messages', label: 'Messages', icon: Mail },
 ] as const;

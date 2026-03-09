@@ -11,12 +11,15 @@ export interface BraveMissionsViewProps {
   choices: MissionSuggestion[];
   onSelectMission: (choice: MissionSuggestion) => void;
   onFinishCall: () => void;
+  /** When provided, mission detail shows "Talk about this" which adds the mission and navigates to talk. */
+  onTalkAboutMission?: (mission: MissionSuggestion) => void;
 }
 
 export default function BraveMissionsView({
   choices,
   onSelectMission,
   onFinishCall,
+  onTalkAboutMission,
 }: BraveMissionsViewProps) {
   const [selectedMission, setSelectedMission] = useState<MissionSuggestion | null>(null);
   const [detailMission, setDetailMission] = useState<MissionSuggestion | null>(null);
@@ -128,6 +131,7 @@ export default function BraveMissionsView({
           onAccept={handleAccept}
           onDecline={handleDeclineOrDismiss}
           onDismiss={handleDeclineOrDismiss}
+          onTalkAbout={onTalkAboutMission}
         />
       )}
     </>

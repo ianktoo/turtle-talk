@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Mission, MissionSuggestion } from '@/lib/speech/types';
-import { getDb, getDeviceId } from '@/lib/db';
+import { getDb, getGuestDb, getDeviceId } from '@/lib/db';
 
 export function useMissions(childId?: string) {
-  const id = childId ?? (typeof window !== 'undefined' ? getDeviceId() : 'default');
-  const db = getDb();
+  const isGuest = childId == null || childId === 'default';
+  const id = isGuest
+    ? (typeof window !== 'undefined' ? getDeviceId() : 'default')
+    : (childId ?? (typeof window !== 'undefined' ? getDeviceId() : 'default'));
+  const db = isGuest ? getGuestDb() : getDb();
 
   // Synchronous read for instant initial state (localStorage provider).
   const syncMissions = db.getMissionsSync?.(id) ?? null;
@@ -16,6 +19,13 @@ export function useMissions(childId?: string) {
   // Async providers (Supabase, Convex): fetch after mount.
   useEffect(() => {
     if (syncMissions !== null) return;
+    db.getMissions(id)
+      .then(setMissions)
+      .catch(() => setMissions([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const refetch = useCallback(() => {
     db.getMissions(id)
       .then(setMissions)
       .catch(() => setMissions([]));
@@ -79,5 +89,6 @@ export function useMissions(childId?: string) {
     addMission,
     completeMission,
     deleteMission,
+    refetch,
   };
 }

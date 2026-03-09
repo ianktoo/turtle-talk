@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { PhoneOff, RotateCcw, Phone } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import type { VoiceSessionState } from '@/lib/speech/voice/types';
 
 const ACTIVE_STATES = new Set<VoiceSessionState>([
@@ -18,6 +19,8 @@ const EXPAND_DELAY_MS = 280;
 export interface TalkEndCallButtonProps {
   state: VoiceSessionState;
   hasError: boolean;
+  /** When true, show gold styling and fire confetti (mission generated during call). */
+  missionGenerated?: boolean;
   onEnd: () => void;
   onRetry: () => Promise<void>;
   onStart?: () => Promise<void>;
@@ -26,18 +29,37 @@ export interface TalkEndCallButtonProps {
 export default function TalkEndCallButton({
   state,
   hasError,
+  missionGenerated = false,
   onEnd,
   onRetry,
   onStart,
 }: TalkEndCallButtonProps) {
   const [expanded, setExpanded] = useState(false);
   const expandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const confettiFiredRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (expandTimerRef.current) clearTimeout(expandTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (missionGenerated && !confettiFiredRef.current) {
+      confettiFiredRef.current = true;
+      const count = 80;
+      const defaults = { origin: { y: 0.6 }, zIndex: 200 };
+      const fire = (particleRatio: number, opts: confetti.Options) => {
+        confetti({ ...defaults, ...opts, particleCount: Math.floor(count * particleRatio) });
+      };
+      fire(0.25, { spread: 26, startVelocity: 55 });
+      fire(0.2, { spread: 60 });
+      fire(0.35, { spread: 100, decay: 0.91 });
+      fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92 });
+      fire(0.15, { spread: 120, startVelocity: 45 });
+    }
+    if (!missionGenerated) confettiFiredRef.current = false;
+  }, [missionGenerated]);
 
   const isConnecting = state === 'connecting';
   const isActive = ACTIVE_STATES.has(state);
@@ -95,7 +117,7 @@ export default function TalkEndCallButton({
         aria-live="polite"
       >
         <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden>🐢</span>
-        Shelly is getting ready...
+        Connecting to Shelly
       </div>
     );
   }
@@ -213,14 +235,16 @@ export default function TalkEndCallButton({
         minWidth: 150,
         padding: '0 28px',
         borderRadius: 'var(--v2-radius-pill)',
-        background: 'var(--v2-end-call-red)',
+        background: missionGenerated
+          ? 'linear-gradient(135deg, var(--v2-gold) 0%, var(--v2-gold-dark) 100%)'
+          : 'var(--v2-end-call-red)',
         color: 'white',
         border: 'none',
         cursor: 'pointer',
         fontSize: '1rem',
         fontWeight: 700,
         boxShadow: 'var(--v2-shadow-card)',
-        transition: 'width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), padding 0.25s ease, transform 0.15s ease, border-radius 0.25s ease',
+        transition: 'width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), padding 0.25s ease, transform 0.15s ease, border-radius 0.25s ease, background 0.3s ease',
       }}
       onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
       onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}

@@ -16,6 +16,8 @@ interface UseVoiceSessionOptions extends VoiceSessionOptions {
   onChildName?: (name: string) => void;
   onTopic?: (topic: string) => void;
   onMessagesChange?: (msgs: Message[]) => void;
+  /** When true, call start() once after subscribing so the call starts without user tapping. */
+  autoConnect?: boolean;
 }
 
 interface UseVoiceSessionResult {
@@ -49,12 +51,14 @@ export function useVoiceSession(
   const [isMeaningful, setIsMeaningful] = useState(false);
   const callStartRef = useRef<number | null>(null);
   const meaningfulTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoConnectDoneRef = useRef(false);
 
   // Keep option callbacks in refs so event handlers never go stale
   const optsRef = useRef(options);
   useEffect(() => { optsRef.current = options; });
 
-  // Register provider event listeners once (re-run only if provider instance changes)
+  // Register provider event listeners once (re-run only if provider instance changes).
+  // When autoConnect is true, start the call after listeners are attached so we never miss state updates.
   useEffect(() => {
     const ACTIVE_STATES = new Set(['listening', 'recording', 'processing', 'speaking']);
     const onState = (s: VoiceSessionState) => {
@@ -99,6 +103,23 @@ export function useVoiceSession(
     provider.on('appToolCall',   onAppTool);
     provider.on('error',          onError);
     provider.on('end',            onEnd);
+
+    const autoConnect = optsRef.current.autoConnect;
+    if (autoConnect && !autoConnectDoneRef.current) {
+      autoConnectDoneRef.current = true;
+      queueMicrotask(() => {
+        const opts = optsRef.current;
+        setError(null);
+        setIsMeaningful(false);
+        provider.start({
+          childName:         opts.childName,
+          topics:            opts.topics,
+          initialMessages:   opts.initialMessages,
+          difficultyProfile: opts.difficultyProfile,
+          activeMission:     opts.activeMission,
+        }).catch(() => {});
+      });
+    }
 
     return () => {
       provider.off('stateChange',     onState);

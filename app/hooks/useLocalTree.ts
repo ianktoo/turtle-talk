@@ -5,16 +5,7 @@ import { getDeviceId } from '@/lib/db';
 import { getPlacedMissionIds, savePlacedMissionIds } from '@/lib/db/providers/localStorage';
 import { useMissions } from '@/app/hooks/useMissions';
 import type { PlacedDecoration } from '@/app/hooks/useTree';
-
-const THEME_EMOJI: Record<string, string> = {
-  brave: '🦁',
-  kind: '💛',
-  calm: '🌊',
-  confident: '⭐',
-  creative: '🎨',
-  social: '🤝',
-  curious: '🔍',
-};
+import { getDecorationEmoji } from '@/lib/garden/decoration-meanings';
 
 export interface EarnedDecoration {
   /** mission ID — used as the key when placing on tree */
@@ -38,12 +29,12 @@ export function useLocalTree(childId?: string) {
   // Decorations the child has earned but not yet placed on the tree
   const unplacedDecorations: EarnedDecoration[] = completedMissions
     .filter((m) => !placedSet.has(m.id))
-    .map((m) => ({ id: m.id, emoji: THEME_EMOJI[m.theme ?? 'curious'] ?? '🔍' }));
+    .map((m) => ({ id: m.id, emoji: getDecorationEmoji(m.theme ?? 'curious') }));
 
   // Decorations already on the tree (for ChristmasTreeSVG)
   const missionById = Object.fromEntries(completedMissions.map((m) => [m.id, m]));
   const placedDecorations: PlacedDecoration[] = placedMissionIds.map((mId, i) => ({
-    emoji: THEME_EMOJI[missionById[mId]?.theme ?? 'curious'] ?? '🔍',
+    emoji: getDecorationEmoji(missionById[mId]?.theme ?? 'curious'),
     slotId: `slot-${i}`,
   }));
 
@@ -55,6 +46,7 @@ export function useLocalTree(childId?: string) {
     (missionId: string) => {
       setPlacedMissionIds((prev) => {
         if (prev.includes(missionId)) return prev;
+        if (prev.length >= 15) return prev; // cap at 15 decorations on tree
         const next = [...prev, missionId];
         savePlacedMissionIds(id, next);
         return next;

@@ -102,7 +102,7 @@ export default function TalkConversationBubbles({
               }}
             >
               {isConnecting
-                ? 'Getting ready...'
+                ? 'Connecting to Shelly'
                 : isListeningEmpty
                   ? 'Say hi or ask a question.'
                   : 'Tap the button below to talk with Shelly.'}

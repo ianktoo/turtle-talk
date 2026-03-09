@@ -78,6 +78,7 @@ function V2ConversationView() {
     endConversation,
     startListening,
   } = useVoiceSession(providerRef.current, {
+    autoConnect: true,
     onEnd: () => {},
     onMissionChoices: setPendingMissionChoices,
     initialMessages: savedMessages,
@@ -140,7 +141,7 @@ function V2ConversationView() {
     });
   }, [childId, saveCallFeedback, showFeedbackThenPostCall]);
 
-  if (pendingMissionChoices) {
+  if (pendingMissionChoices && !callActive) {
     return (
       <BraveMissionsView
         choices={pendingMissionChoices}
@@ -152,6 +153,11 @@ function V2ConversationView() {
         onFinishCall={() => {
           setPendingMissionChoices(null);
           setShowFeedbackThenPostCall(true);
+        }}
+        onTalkAboutMission={(mission) => {
+          addMission(mission);
+          setPendingMissionChoices(null);
+          router.push('/talk');
         }}
       />
     );
@@ -222,6 +228,7 @@ function V2ConversationView() {
         <TalkEndCallButton
           state={state}
           hasError={hasError}
+          missionGenerated={!!pendingMissionChoices && callActive}
           onEnd={endConversation}
           onRetry={startListening}
           onStart={startListening}

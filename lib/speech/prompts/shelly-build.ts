@@ -37,8 +37,9 @@ export function buildSystemPrompt(ctx: ShellyPromptContext | ConversationContext
   if (activeMission && activeMission.title && activeMission.description) {
     prompt +=
       `\n\nACTIVE CHALLENGE: "${activeMission.title}" — ${activeMission.description}. ` +
-      `Mention it briefly in one of your questions (e.g. "Have you tried your challenge yet?"). ` +
-      `If the child brings it up, call acknowledge_mission_progress.`;
+      `This conversation is focused on this challenge. Help the child complete it or talk through it: give ideas, encourage them, and ask how it went. ` +
+      `Do NOT propose new missions or end the conversation to suggest missions; stay on this one challenge. ` +
+      `If the child makes progress or completes it, call acknowledge_mission_progress.`;
   }
 
   const profile: ShellyPromptContext['difficultyProfile'] =

@@ -50,7 +50,7 @@ export default function TalkButton() {
   return (
     <Link
       href="/talk"
-      aria-label="Talk to Shelly"
+      aria-label="Start a Brave Call with Shelly"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onPointerDown={handlePointerDown}
@@ -89,7 +89,7 @@ export default function TalkButton() {
           transition: 'max-width var(--v2-transition-spring), opacity var(--v2-transition-fast), margin-left var(--v2-transition-fast)',
         }}
       >
-        Talk to Shelly
+        Brave Call with Shelly
       </span>
     </Link>
   );

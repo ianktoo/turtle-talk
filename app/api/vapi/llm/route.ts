@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     if (canEnd && response.missionChoices?.length) {
       tools.push(toolCall('proposeMissions', { choices: response.missionChoices }));
     }
-    if (canEnd && response.endConversation) {
+    if (canEnd && response.endConversation && !response.missionChoices?.length) {
       tools.push(toolCall('reportEndConversation', {}));
     }
 

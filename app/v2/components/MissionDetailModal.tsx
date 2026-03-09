@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, MessageCircle } from 'lucide-react';
 import type { MissionSuggestion } from '@/lib/speech/types';
 
 const DIFFICULTY_LABEL: Record<string, string> = {
@@ -15,6 +15,8 @@ export interface MissionDetailModalProps {
   onAccept: () => void;
   onDecline: () => void;
   onDismiss: () => void;
+  /** When provided, show a "Talk about this" card that opens talk focused on this mission. */
+  onTalkAbout?: (mission: MissionSuggestion) => void;
 }
 
 export default function MissionDetailModal({
@@ -22,6 +24,7 @@ export default function MissionDetailModal({
   onAccept,
   onDecline,
   onDismiss,
+  onTalkAbout,
 }: MissionDetailModalProps) {
   const dismissRef = useRef<HTMLButtonElement>(null);
 
@@ -108,6 +111,40 @@ export default function MissionDetailModal({
         >
           {mission.description}
         </p>
+
+        {onTalkAbout && (
+          <button
+            type="button"
+            onClick={() => onTalkAbout(mission)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              width: '100%',
+              padding: '14px 20px',
+              borderRadius: 'var(--v2-radius-card)',
+              border: '1px solid var(--v2-primary)',
+              background: 'rgba(0, 207, 185, 0.08)',
+              color: 'var(--v2-primary-dark)',
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background var(--v2-transition-fast), transform var(--v2-transition-fast)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 207, 185, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 207, 185, 0.08)';
+            }}
+            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
+            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            <MessageCircle size={20} strokeWidth={2} aria-hidden />
+            Talk about this
+          </button>
+        )}
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 4 }}>
           <button

@@ -51,6 +51,14 @@ export default function V2MissionsPage() {
   const handleDone = () => {
     if (detailMission?.status === 'active') {
       completeMission(detailMission.id);
+      if (child?.childId) {
+        fetch('/api/missions/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ missionId: detailMission.id }),
+        }).catch((e) => console.error('[missions] complete API', e));
+      }
     }
     closeDetail();
   };

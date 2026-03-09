@@ -5,7 +5,6 @@ import Title from './components/Title';
 import MenuButton from './components/MenuButton';
 import NotificationArea from './components/NotificationArea';
 import TalkButton from './components/TalkButton';
-import TagLine from './components/TagLine';
 
 export default function V2HomePage() {
   return (
@@ -48,7 +47,6 @@ export default function V2HomePage() {
           }}
         >
           <TalkButton />
-          <TagLine />
         </div>
       </main>
     </>

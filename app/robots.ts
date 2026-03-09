@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/talk', '/missions', '/appreciation', '/appreciation/wish-list', '/journals', '/journal', '/messages'],
+        allow: ['/', '/talk', '/conversation', '/missions', '/appreciation', '/garden', '/wish-list', '/journals', '/journal', '/messages'],
         disallow: ['/parent', '/api/'],
       },
     ],
