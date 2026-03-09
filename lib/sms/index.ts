@@ -9,22 +9,27 @@
  *   await getSMS().send({ to: '+12125551234', from: '+15551234567', body: 'Hello!' });
  */
 import type { SMSService } from './types';
+import { createLazySingleton, pickProvider } from '@/lib/utils/singleton';
 
 export type { SMSService, SMSMessage, SMSSendResult } from './types';
 
-let _instance: SMSService | null = null;
+const SMS_PROVIDERS = ['plivo'] as const;
+type SmsProvider = (typeof SMS_PROVIDERS)[number];
 
-export function getSMS(): SMSService {
-  if (_instance) return _instance;
-
-  const provider = process.env.SMS_PROVIDER ?? 'plivo';
+export const getSMS = createLazySingleton((): SMSService => {
+  const provider = pickProvider<SmsProvider>(
+    'SMS_PROVIDER',
+    process.env.SMS_PROVIDER,
+    SMS_PROVIDERS,
+    'plivo',
+  );
 
   if (provider === 'plivo') {
     const { PlivoSMSProvider } = require('./providers/plivo');
-    _instance = new PlivoSMSProvider();
-  } else {
-    throw new Error(`Unknown SMS provider: "${provider}". Supported: plivo`);
+    return new PlivoSMSProvider();
   }
 
-  return _instance!;
-}
+  // pickProvider already throws for unknown values; this is unreachable but
+  // satisfies the exhaustive type check.
+  throw new Error(`Unhandled SMS provider: ${provider}`);
+});
