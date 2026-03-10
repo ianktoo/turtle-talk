@@ -5,23 +5,20 @@
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { AdminDatabase } from './admin-database';
+import { createLazySingleton } from '@/lib/utils/singleton';
 
-let adminClient: SupabaseClient<AdminDatabase> | null = null;
-
-export function getSupabaseAdmin(): SupabaseClient<AdminDatabase> {
-  if (adminClient) return adminClient;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export const getSupabaseAdmin = createLazySingleton((): SupabaseClient<AdminDatabase> => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) {
     throw new Error(
       'SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL are required for admin operations'
     );
   }
-  adminClient = createClient<AdminDatabase>(url, key, {
+  return createClient<AdminDatabase>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  return adminClient;
-}
+});
 
 /**
  * Optional: returns null if service role is not configured (e.g. dev without Supabase Auth).

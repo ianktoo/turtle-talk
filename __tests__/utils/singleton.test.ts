@@ -16,6 +16,22 @@ describe('createLazySingleton', () => {
     const getInstance = createLazySingleton(() => 'hello');
     expect(getInstance()).toBe('hello');
   });
+
+  it('retries the factory on subsequent calls if it threw', () => {
+    let callCount = 0;
+    const getInstance = createLazySingleton(() => {
+      callCount++;
+      if (callCount === 1) throw new Error('first call fails');
+      return { value: callCount };
+    });
+
+    expect(() => getInstance()).toThrow('first call fails');
+    const result = getInstance();
+    expect(result).toEqual({ value: 2 });
+    // Third call returns cached instance, factory not called again
+    expect(getInstance()).toBe(result);
+    expect(callCount).toBe(2);
+  });
 });
 
 describe('pickProvider', () => {
