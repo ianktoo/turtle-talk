@@ -122,7 +122,7 @@ All providers implement simple interfaces from `lib/speech/types.ts`. Swap via `
 
 ## Shelly System Prompt (`lib/speech/providers/chat.ts` → `SHELLY_SYSTEM_PROMPT`)
 The full prompt enforces:
-1. **Persona** — kind, curious sea turtle for ages 4–10; 2–3 sentence max; simple words
+1. **Persona** — kind, curious sea turtle for ages 5–13; 2–3 sentence max; simple words
 2. **Strict JSON output** — every response must be valid JSON: `{ "text": "...", "mood": "..." }`
 3. **Mood selection rules**:
    - `happy` — good news, fun facts, joy

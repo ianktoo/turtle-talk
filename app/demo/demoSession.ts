@@ -102,7 +102,7 @@ export interface DemoSession {
   survey: DemoSurvey;
   hasSeenOnboarding?: boolean;
   demoTheme?: 'dark' | 'light';
-  ageGroup?: '4-6' | '7-9' | '10-12' | 'other' | 'unknown';
+  ageGroup?: '5-7' | '8-10' | '11-13' | '13+' | 'other' | 'unknown';
   hasCompletedOnboarding?: boolean;
   /**
    * Unique ID for this demo session, used to link child + parent views.

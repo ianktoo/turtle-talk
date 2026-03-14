@@ -52,6 +52,13 @@ type Book = {
   title: string;
   author: string;
   shortDescription?: string;
+  coverEmoji?: string;
+  coverUrl?: string;
+  ageRange?: string;
+  ageGroup?: string;
+  goodreadsRating?: number;
+  whyKidsChoose?: string[];
+  shellySays?: string;
   whyRecommended?: string;
   fullDescription?: string;
   recommendedFor?: string[];
@@ -599,9 +606,10 @@ function DemoSettingsModal(props: {
           value={ageGroup}
           onChange={(v) => props.onUpdate({ ageGroup: v as DemoSession['ageGroup'] })}
           options={[
-            { value: '4-6', label: '4-6 years' },
-            { value: '7-9', label: '7-9 years' },
-            { value: '10-12', label: '10-12 years' },
+            { value: '5-7', label: '5-7 years' },
+            { value: '8-10', label: '8-10 years' },
+            { value: '11-13', label: '11-13 years' },
+            { value: '13+', label: '13+ years' },
             { value: 'other', label: 'Mixed ages / other' },
             { value: 'unknown', label: "I'm not sure yet" },
           ]}
@@ -968,14 +976,18 @@ function MissionChoicesCard(props: {
   );
 }
 
-type ChildAgeChoice = 'threeToFive' | 'sixToTen' | 'noShare';
+type ChildAgeChoice = 'fiveToSeven' | 'eightToTen' | 'elevenToThirteen' | 'thirteenPlus' | 'noShare';
 
 function mapChildAgeChoiceToAgeGroup(choice: ChildAgeChoice): DemoSession['ageGroup'] {
   switch (choice) {
-    case 'threeToFive':
-      return '4-6';
-    case 'sixToTen':
-      return '7-9';
+    case 'fiveToSeven':
+      return '5-7';
+    case 'eightToTen':
+      return '8-10';
+    case 'elevenToThirteen':
+      return '11-13';
+    case 'thirteenPlus':
+      return '13+';
     case 'noShare':
     default:
       return 'unknown';
@@ -1511,7 +1523,11 @@ function ChildProfileWizard(props: {
   };
 
   const ageChoice: ChildAgeChoice =
-    props.ageGroup === '4-6' ? 'threeToFive' : props.ageGroup === '7-9' ? 'sixToTen' : 'noShare';
+    props.ageGroup === '5-7' ? 'fiveToSeven'
+    : props.ageGroup === '8-10' ? 'eightToTen'
+    : props.ageGroup === '11-13' ? 'elevenToThirteen'
+    : props.ageGroup === '13+' ? 'thirteenPlus'
+    : 'noShare';
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
     flex: '1 1 140px',
@@ -1568,8 +1584,10 @@ function ChildProfileWizard(props: {
         <Card title="How old are you?">
           <div style={{ display: 'grid', gap: 12 }}>
             {[
-              { id: 'threeToFive' as ChildAgeChoice, label: 'Three to Five' },
-              { id: 'sixToTen' as ChildAgeChoice, label: 'Six to Ten' },
+              { id: 'fiveToSeven' as ChildAgeChoice, label: '5 to 7' },
+              { id: 'eightToTen' as ChildAgeChoice, label: '8 to 10' },
+              { id: 'elevenToThirteen' as ChildAgeChoice, label: '11 to 13' },
+              { id: 'thirteenPlus' as ChildAgeChoice, label: '13+' },
               { id: 'noShare' as ChildAgeChoice, label: "I don't wanna share" },
             ].map((opt) => {
               const active = ageChoice === opt.id;
@@ -1631,6 +1649,7 @@ function ChildProfileWizard(props: {
 function DemoParentDashboard(props: {
   parentPriority: DemoParentPriority;
   childName: string | null;
+  ageGroup: string | undefined;
   topics: string[];
   messages: Message[];
   completedCount: number;
@@ -1641,14 +1660,13 @@ function DemoParentDashboard(props: {
 }) {
   const recommendedBooks = useMemo(() => {
     const safeBooks = (books as Book[]) ?? [];
-    if (props.topics.length === 0) return safeBooks.slice(0, 4);
-    const lowerTopics = new Set(props.topics.map((t) => t.toLowerCase()));
-    const byTag = safeBooks.filter((b) => {
-      const rec = Array.isArray(b.recommendedFor) ? b.recommendedFor : [];
-      return rec.some((t) => lowerTopics.has(String(t).toLowerCase()));
-    });
-    return (byTag.length ? byTag : safeBooks).slice(0, 4);
-  }, [props.topics]);
+    const ageGroup = props.ageGroup;
+    if (ageGroup) {
+      const byAge = safeBooks.filter((b) => b.ageGroup === ageGroup);
+      if (byAge.length > 0) return byAge;
+    }
+    return safeBooks.filter((b) => b.ageGroup === '5-7');
+  }, [props.ageGroup]);
 
   const highlights = useMemo(() => {
     const lastUser = [...props.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
@@ -1783,24 +1801,61 @@ function DemoParentDashboard(props: {
 
         {props.parentPriority === 'books' && (
           <Card title="Recommended books">
-            <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gap: 12 }}>
               {recommendedBooks.map((b) => (
                 <div
-                  key={b.title}
+                  key={b.id}
                   style={{
                     border: '1px solid rgba(255,255,255,0.10)',
                     borderRadius: 14,
-                    padding: 12,
+                    overflow: 'hidden',
                     background: 'rgba(0,0,0,0.16)',
-                    display: 'grid',
-                    gap: 4,
                   }}
                 >
-                  <div style={{ fontWeight: 800 }}>{b.title}</div>
-                  <div style={{ color: 'var(--v2-text-secondary)', fontSize: 13 }}>{b.author}</div>
-                  {b.whyRecommended && (
-                    <div style={{ color: 'var(--v2-text-secondary)', fontSize: 13 }}>{b.whyRecommended}</div>
+                  {b.coverUrl && (
+                    <img
+                      src={b.coverUrl}
+                      alt={b.title}
+                      style={{
+                        width: '100%',
+                        height: 140,
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
                   )}
+                  <div style={{ padding: 12, display: 'grid', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                      <div style={{ fontWeight: 800 }}>{b.title}</div>
+                      {b.goodreadsRating != null && (
+                        <div style={{ fontSize: 12, color: 'var(--v2-text-secondary)', whiteSpace: 'nowrap' }}>
+                          {'\u2B50'} {b.goodreadsRating}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ color: 'var(--v2-text-secondary)', fontSize: 13 }}>
+                      {b.author}{b.ageRange ? ` · Ages ${b.ageRange}` : ''}
+                    </div>
+                    {b.whyKidsChoose && b.whyKidsChoose.length > 0 && (
+                      <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--v2-text-secondary)', fontSize: 12, lineHeight: 1.5 }}>
+                        {b.whyKidsChoose.map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {b.shellySays && (
+                      <div style={{
+                        fontSize: 12,
+                        color: 'var(--v2-text-secondary)',
+                        fontStyle: 'italic',
+                        borderLeft: '2px solid rgba(140,120,255,0.5)',
+                        paddingLeft: 8,
+                        marginTop: 2,
+                      }}>
+                        &ldquo;{b.shellySays}&rdquo;
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -2503,6 +2558,7 @@ export default function DemoFlow() {
                 <DemoParentDashboard
                   parentPriority={session.parentPriority}
                   childName={childName}
+                  ageGroup={session.ageGroup}
                   topics={topics}
                   messages={voice.messages}
                   completedCount={completedMissions.length}

@@ -97,7 +97,7 @@ export default function PrivacyPage() {
           <Section title="1. Who We Are">
             <p>
               TurtleTalk (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) provides an AI voice companion
-              designed for children aged 4&ndash;10. This Privacy Policy explains how we collect, use, and safeguard
+              designed for children aged 5&ndash;13. This Privacy Policy explains how we collect, use, and safeguard
               information when you or your child use TurtleTalk, including the interactive demo experience.
             </p>
           </Section>
