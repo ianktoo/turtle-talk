@@ -188,6 +188,9 @@ export class NativeVoiceProvider extends BaseVoiceProvider {
     if (opts.topics?.length) formData.append('topics', JSON.stringify(opts.topics));
     if (opts.difficultyProfile) formData.append('difficultyProfile', opts.difficultyProfile);
     if (opts.activeMission) formData.append('activeMission', JSON.stringify(opts.activeMission));
+    if (opts.timezone) formData.append('timezone', opts.timezone);
+    if (opts.clientLocalTime) formData.append('clientLocalTime', opts.clientLocalTime);
+    if (opts.location && typeof opts.location === 'object') formData.append('location', JSON.stringify(opts.location));
 
     try {
       const res = await fetch('/api/talk', { method: 'POST', body: formData });

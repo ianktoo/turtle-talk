@@ -122,6 +122,9 @@ export function useVoiceSession(
           ageGroup:          opts.ageGroup,
           favoriteBook:      opts.favoriteBook,
           funFacts:          opts.funFacts,
+          timezone:          opts.timezone,
+          clientLocalTime:   opts.clientLocalTime,
+          location:          opts.location,
         }).catch(() => {});
       });
     }
@@ -157,6 +160,9 @@ export function useVoiceSession(
       ageGroup:          opts.ageGroup,
       favoriteBook:      opts.favoriteBook,
       funFacts:          opts.funFacts,
+      timezone:          opts.timezone,
+      clientLocalTime:   opts.clientLocalTime,
+      location:          opts.location,
     });
   }, [provider]);
 

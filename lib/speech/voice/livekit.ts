@@ -45,6 +45,9 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
           ageGroup: options.ageGroup ?? undefined,
           favoriteBook: options.favoriteBook ?? undefined,
           funFacts: options.funFacts?.length ? options.funFacts : undefined,
+          timezone: options.timezone ?? undefined,
+          clientLocalTime: options.clientLocalTime ?? undefined,
+          location: options.location ?? undefined,
         }),
       });
       if (!tokenRes.ok) {

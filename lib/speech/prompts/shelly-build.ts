@@ -1,5 +1,7 @@
 import type { ConversationContext } from '../types';
 import { BASE_SYSTEM_PROMPT } from './shelly-base';
+import { getTimeDescription } from '../awareness/time';
+import { getLocationDescription } from '../awareness/location';
 
 /**
  * Minimal context needed to build Shelly's system prompt.
@@ -11,6 +13,10 @@ export interface ShellyPromptContext {
   topics?: string[];
   difficultyProfile?: 'beginner' | 'intermediate' | 'confident';
   activeMission?: { title: string; description: string } | null;
+  timezone?: string | null;
+  clientLocalTime?: string | null;
+  location?: ConversationContext['location'];
+  weatherDescription?: string | null;
 }
 
 /**
@@ -23,6 +29,10 @@ export function buildSystemPrompt(ctx: ShellyPromptContext | ConversationContext
     topics,
     activeMission,
     difficultyProfile,
+    timezone,
+    clientLocalTime,
+    location,
+    weatherDescription,
   } = ctx as ShellyPromptContext & ConversationContext;
 
   let prompt =
@@ -40,6 +50,16 @@ export function buildSystemPrompt(ctx: ShellyPromptContext | ConversationContext
       `This conversation is focused on this challenge. Help the child complete it or talk through it: give ideas, encourage them, and ask how it went. ` +
       `Do NOT propose new missions or end the conversation to suggest missions; stay on this one challenge. ` +
       `If the child makes progress or completes it, call acknowledge_mission_progress.`;
+  }
+
+  const awarenessParts: string[] = [];
+  const timeDesc = getTimeDescription({ timezone, clientLocalTime });
+  if (timeDesc) awarenessParts.push(`Current date and time where the child is: ${timeDesc}.`);
+  const locDesc = getLocationDescription(location ?? undefined);
+  if (locDesc) awarenessParts.push(`The child is in: ${locDesc}.`);
+  if (weatherDescription?.trim()) awarenessParts.push(`Current weather there: ${weatherDescription.trim()}.`);
+  if (awarenessParts.length) {
+    prompt += `\n\nAWARENESS (use naturally; do not lecture): ${awarenessParts.join(' ')}`;
   }
 
   const profile: ShellyPromptContext['difficultyProfile'] =

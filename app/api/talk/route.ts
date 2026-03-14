@@ -8,9 +8,10 @@ import { OpenAISTTProvider, GeminiSTTProvider } from '@/lib/speech/providers/stt
 import { ElevenLabsTTSProvider, GeminiTTSProvider } from '@/lib/speech/providers/tts';
 import { createChatProvider } from '@/lib/speech/providers/chat';
 import { ChildSafeGuardrail } from '@/lib/speech/guardrails/ChildSafeGuardrail';
-import type { ConversationContext, Message } from '@/lib/speech/types';
+import type { ConversationContext, Message, AwarenessLocation } from '@/lib/speech/types';
 import { SpeechServiceError, isProviderUnusualActivityError } from '@/lib/speech/errors';
 import { speechConfig } from '@/lib/speech/config';
+import { getWeatherDescription } from '@/lib/speech/awareness/weather';
 
 /** When the LLM returns empty responseText, we send this so the user always gets a spoken reply. */
 const FALLBACK_EMPTY_RESPONSE = "Hmm, I didn't quite get that. Can you say it again?";
@@ -67,7 +68,38 @@ export async function POST(req: NextRequest) {
     try { activeMission = JSON.parse(activeMissionRaw); } catch { /* ignore malformed */ }
   }
 
-  const context: ConversationContext = { messages, childName, topics, difficultyProfile, activeMission };
+  // Time and location awareness (optional)
+  const timezone = (typeof formData.get('timezone') === 'string' && formData.get('timezone')) || undefined;
+  const clientLocalTime = (typeof formData.get('clientLocalTime') === 'string' && formData.get('clientLocalTime')) || undefined;
+  let location: AwarenessLocation | undefined;
+  const locationRaw = formData.get('location');
+  if (locationRaw && typeof locationRaw === 'string') {
+    try {
+      const parsed = JSON.parse(locationRaw) as AwarenessLocation;
+      if (parsed && typeof parsed === 'object') location = parsed;
+    } catch { /* ignore */ }
+  }
+
+  let weatherDescription: string | undefined;
+  if (location?.latitude != null && location?.longitude != null) {
+    try {
+      weatherDescription = await getWeatherDescription(location.latitude, location.longitude);
+    } catch {
+      // non-fatal; Shelly works without weather
+    }
+  }
+
+  const context: ConversationContext = {
+    messages,
+    childName,
+    topics,
+    difficultyProfile,
+    activeMission,
+    timezone,
+    clientLocalTime,
+    location,
+    weatherDescription,
+  };
 
   const stt = speechConfig.stt.provider === 'gemini' ? new GeminiSTTProvider() : new OpenAISTTProvider();
   const tts = speechConfig.tts.provider === 'gemini' ? new GeminiTTSProvider() : new ElevenLabsTTSProvider();

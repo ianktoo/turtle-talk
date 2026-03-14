@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/server-admin';
 
 /**
  * POST /api/livekit/token
- * Body: { roomName?, participantName?, childName?, topics?, ageGroup?, favoriteBook?, funFacts? }
+ * Body: { roomName?, participantName?, childName?, topics?, ageGroup?, favoriteBook?, funFacts?, timezone?, clientLocalTime?, location? }
  * Returns: { token, roomName } for the client to join the LiveKit room.
  * Requires LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL in env.
  */
@@ -37,6 +37,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const ageGroup = typeof body.ageGroup === 'string' && body.ageGroup.trim() ? body.ageGroup.trim() : null;
     const favoriteBook = typeof body.favoriteBook === 'string' && body.favoriteBook.trim() ? body.favoriteBook.trim() : null;
     const funFacts = Array.isArray(body.funFacts) ? (body.funFacts as string[]).filter((f): f is string => typeof f === 'string') : [];
+    const timezone = typeof body.timezone === 'string' && body.timezone.trim() ? body.timezone.trim() : null;
+    const clientLocalTime = typeof body.clientLocalTime === 'string' && body.clientLocalTime.trim() ? body.clientLocalTime.trim() : null;
+    const location = body.location && typeof body.location === 'object' ? body.location : null;
     let allowInterruptions = false;
     try {
       const admin = getSupabaseAdmin();
@@ -55,6 +58,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (ageGroup) meta.ageGroup = ageGroup;
     if (favoriteBook) meta.favoriteBook = favoriteBook;
     if (funFacts.length > 0) meta.funFacts = funFacts;
+    if (timezone) meta.timezone = timezone;
+    if (clientLocalTime) meta.clientLocalTime = clientLocalTime;
+    if (location) meta.location = location;
     dispatchMetadata = JSON.stringify(meta);
   } catch {
     roomName = `talk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
