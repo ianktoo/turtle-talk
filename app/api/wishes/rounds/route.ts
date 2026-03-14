@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const { data: rounds, error: roundsErr } = await (supabase as any)
     .from('child_wish_round')
-    .select('id, status, parent_honored_option_id, created_at')
+    .select('id, status, parent_honored_option_id, created_at, missions_required, missions_completed')
     .eq('child_id', childId)
     .order('created_at', { ascending: false });
 
@@ -37,10 +37,12 @@ export async function GET(request: NextRequest) {
     status: string;
     parent_honored_option_id: string | null;
     created_at: string;
+    missions_required: number;
+    missions_completed: number;
   }[];
 
   const honoredIds = list
-    .filter((r) => r.status === 'parent_honored' && r.parent_honored_option_id)
+    .filter((r) => (r.status === 'parent_honored' || r.status === 'realized') && r.parent_honored_option_id)
     .map((r) => r.parent_honored_option_id as string);
 
   let honoredOptions: { id: string; label: string }[] = [];
@@ -58,8 +60,10 @@ export async function GET(request: NextRequest) {
     id: r.id,
     status: r.status,
     created_at: r.created_at,
+    missions_required: r.missions_required,
+    missions_completed: r.missions_completed,
     honoredOption:
-      r.status === 'parent_honored' && r.parent_honored_option_id
+      (r.status === 'parent_honored' || r.status === 'realized') && r.parent_honored_option_id
         ? optionById[r.parent_honored_option_id] ?? { id: r.parent_honored_option_id, label: '' }
         : undefined,
   }));

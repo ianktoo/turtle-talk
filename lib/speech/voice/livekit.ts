@@ -40,6 +40,9 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
           participantName: 'child',
           childName: options.childName?.trim() || 'little explorer',
           topics: options.topics?.length ? options.topics : undefined,
+          ageGroup: options.ageGroup ?? undefined,
+          favoriteBook: options.favoriteBook ?? undefined,
+          funFacts: options.funFacts?.length ? options.funFacts : undefined,
         }),
       });
       if (!tokenRes.ok) {

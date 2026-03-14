@@ -1,0 +1,74 @@
+[
+  {
+    "id": "movie-1",
+    "title": "Inside Out",
+    "director": "Pete Docter",
+    "shortDescription": "A journey inside a child's mind where emotions learn to work together.",
+    "coverEmoji": "🧠",
+    "ageRange": "5–12",
+    "imdbRating": 8.1,
+    "recommendedFor": ["social-courage", "repair-courage"],
+    "whyRecommended": "Shows children how emotions work and helps them talk about big feelings — ideal for kids learning to understand and express what's going on inside.",
+    "fullDescription": "When 11-year-old Riley moves to a new city, her emotions — Joy, Sadness, Anger, Fear, and Disgust — struggle to keep her happy. This groundbreaking film teaches children that every emotion has value, and that it's okay to feel sad sometimes."
+  },
+  {
+    "id": "movie-2",
+    "title": "Brave",
+    "director": "Mark Andrews & Brenda Chapman",
+    "shortDescription": "A fearless princess defies tradition and discovers what real bravery means.",
+    "coverEmoji": "🏹",
+    "ageRange": "5–12",
+    "imdbRating": 7.1,
+    "recommendedFor": ["performance-bravery"],
+    "whyRecommended": "Explores what it means to be brave — not by being fearless, but by standing up for yourself while staying connected to the people you love.",
+    "fullDescription": "Merida, a Scottish princess, refuses to follow the path laid out for her. When a reckless spell backfires, she must undo the curse and mend the bond torn by her stubbornness. A story about courage, family, and the bravery it takes to change your fate."
+  },
+  {
+    "id": "movie-3",
+    "title": "Coco",
+    "director": "Lee Unkrich & Adrian Molina",
+    "shortDescription": "A boy journeys to the Land of the Dead to unlock his family's musical secret.",
+    "coverEmoji": "🎸",
+    "ageRange": "5–12",
+    "imdbRating": 8.4,
+    "recommendedFor": ["social-courage", "repair-courage"],
+    "whyRecommended": "A beautiful story about family bonds, remembering loved ones, and having the courage to follow your heart — even when it means going against expectations.",
+    "fullDescription": "Miguel dreams of becoming a musician, but his family has banned music for generations. When he accidentally enters the Land of the Dead, he discovers his great-great-grandfather's true story and learns about the importance of family and forgiveness."
+  },
+  {
+    "id": "movie-4",
+    "title": "Finding Nemo",
+    "director": "Andrew Stanton",
+    "shortDescription": "An overprotective father crosses the ocean to rescue his adventurous son.",
+    "coverEmoji": "🐠",
+    "ageRange": "4–10",
+    "imdbRating": 8.2,
+    "recommendedFor": ["performance-bravery", "social-courage"],
+    "whyRecommended": "Teaches children (and parents!) about the balance between safety and independence — perfect for kids working on taking brave steps on their own.",
+    "fullDescription": "When Nemo is captured by a diver, his anxious father Marlin teams up with forgetful Dory to swim across the ocean and bring him home. Meanwhile, Nemo discovers his own courage in a fish tank far from the reef."
+  },
+  {
+    "id": "movie-5",
+    "title": "Luca",
+    "director": "Enrico Casarosa",
+    "shortDescription": "Two sea monsters disguised as humans discover the joy of friendship above the surface.",
+    "coverEmoji": "🌊",
+    "ageRange": "5–12",
+    "imdbRating": 7.4,
+    "recommendedFor": ["social-courage"],
+    "whyRecommended": "A wonderful story about the courage to be yourself around new friends — even when you're afraid of being different.",
+    "fullDescription": "Luca and Alberto are sea monsters who transform into humans when dry. Together they explore an Italian seaside town, enter a race, and learn about trust, friendship, and the bravery it takes to show people who you really are."
+  },
+  {
+    "id": "movie-6",
+    "title": "Encanto",
+    "director": "Jared Bush & Byron Howard",
+    "shortDescription": "A girl without magical powers discovers she's the key to saving her extraordinary family.",
+    "coverEmoji": "🦋",
+    "ageRange": "5–12",
+    "imdbRating": 7.2,
+    "recommendedFor": ["performance-bravery", "repair-courage"],
+    "whyRecommended": "Shows that you don't need a special gift to be special — powerful for children who compare themselves to others or feel like they don't measure up.",
+    "fullDescription": "In the magical Madrigal family, everyone has a special gift — except Mirabel. When the family's magic starts to fade, Mirabel discovers that the cracks in their home mirror the cracks in their relationships, and only honesty and love can heal them."
+  }
+]

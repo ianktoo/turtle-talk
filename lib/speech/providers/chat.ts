@@ -5,12 +5,10 @@
  * uses individual bound tools so each concern is separate and inspectable:
  *
  *   report_mood              — required every turn (sets the turtle face)
- *   propose_missions         — required when ending (3 graded challenges)
- *   end_conversation         — signals conversation end (always with propose_missions)
+ *   propose_missions         — offers 3 graded challenges (mid-conversation or at wrap-up)
+ *   end_conversation         — signals conversation end (after child reacts to missions)
  *   acknowledge_mission_progress — optional, when child mentions their active challenge
  *   note_child_info          — optional, records child's name and turn topic
- *
- * Missions are forced at every conversation end — no more random 30% mid-turn logic.
  */
 
 import { z } from 'zod';
@@ -63,7 +61,8 @@ const proposeMissionsTool = tool(
     name: 'propose_missions',
     description:
       'Offer the child exactly 3 graded challenges — one easy, one medium, one stretch. ' +
-      'You MUST call this whenever you call end_conversation. Missions should relate to what you discussed.',
+      'Call this when you want to offer missions — either during the conversation at a natural moment, or when wrapping up. ' +
+      'Missions should relate to what you discussed. You do NOT need to end the conversation just because you proposed missions.',
     schema: z.object({
       choices: z
         .array(missionItemSchema)
@@ -78,8 +77,9 @@ const endConversationTool = tool(
   {
     name: 'end_conversation',
     description:
-      'Signal the conversation has reached a natural, warm close. ' +
-      'ALWAYS call propose_missions in the same response when you use this tool.',
+      'Signal the conversation has reached a warm, natural close. ' +
+      'Call this only after the child has had a chance to react to proposed missions (if any) and the conversation feels complete. ' +
+      'Say a warm goodbye that references what you talked about before calling this.',
     schema: z.object({}),
   },
 );

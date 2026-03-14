@@ -23,7 +23,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'roundId required' }, { status: 400 });
   }
 
-  let body: { optionId?: string };
+  let body: { optionId?: string; missionsRequired?: number };
   try {
     body = await request.json();
   } catch {
@@ -33,6 +33,10 @@ export async function PATCH(
   if (!optionId) {
     return NextResponse.json({ error: 'optionId required' }, { status: 400 });
   }
+  const missionsRequired =
+    typeof body?.missionsRequired === 'number' && body.missionsRequired >= 1
+      ? Math.round(body.missionsRequired)
+      : 3;
 
   const admin = getSupabaseAdminOptional();
   if (!admin) {
@@ -78,7 +82,12 @@ export async function PATCH(
 
   await (admin as any)
     .from('child_wish_round')
-    .update({ status: 'parent_honored', parent_honored_option_id: optionId })
+    .update({
+      status: 'parent_honored',
+      parent_honored_option_id: optionId,
+      missions_required: missionsRequired,
+      missions_completed: 0,
+    })
     .eq('id', roundId);
 
   await (admin as any).from('parent_encouragement').insert({

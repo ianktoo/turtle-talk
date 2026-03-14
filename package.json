@@ -28,6 +28,7 @@
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "convex": "^1.32.0",
+    "html5-qrcode": "^2.3.8",
     "langchain": "^0.3.37",
     "livekit-client": "^2.17.2",
     "livekit-server-sdk": "^2.15.0",
@@ -35,6 +36,7 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-qr-code": "^2.0.15",
     "three": "^0.169.0"
   },
   "overrides": {

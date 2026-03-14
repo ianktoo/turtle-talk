@@ -3,6 +3,7 @@
  * Use for OTP auth (signInWithOtp, verifyOtp) and client-side Supabase calls.
  */
 import { createBrowserClient } from '@supabase/ssr';
+import { getAuthStorageKey } from './auth-storage-key';
 
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,5 +15,8 @@ export function createClient() {
       'Missing Supabase env: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)'
     );
   }
-  return createBrowserClient(url, key);
+  const storageKey = getAuthStorageKey();
+  return createBrowserClient(url, key, {
+    ...(storageKey ? { cookieOptions: { name: storageKey } } : {}),
+  });
 }

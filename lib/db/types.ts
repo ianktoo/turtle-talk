@@ -37,6 +37,8 @@ export interface DatabaseService {
   addMission(childId: string, suggestion: MissionSuggestion): Promise<Mission>;
   completeMission(childId: string, missionId: string): Promise<void>;
   deleteMission(childId: string, missionId: string): Promise<void>;
+  /** Optional helper for demo/reset flows. */
+  clearMissions?(childId: string): Promise<void>;
 
   // Child memory
   getMemory(childId: string): Promise<ChildMemory>;

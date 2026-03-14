@@ -33,7 +33,7 @@ test('calls OpenAI /v1/realtime/sessions with API key', async () => {
   });
   const req = new NextRequest('http://localhost/api/openai-realtime/session', {
     method: 'POST',
-    body: JSON.stringify({ model: 'gpt-4o-mini-realtime-preview', voice: 'sage' }),
+    body: JSON.stringify({ model: 'gpt-realtime-1.5', voice: 'sage' }),
   });
   await POST(req);
   expect(mockFetch).toHaveBeenCalledWith(

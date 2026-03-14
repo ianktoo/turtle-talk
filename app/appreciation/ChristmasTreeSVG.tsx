@@ -61,7 +61,7 @@ export default function ChristmasTreeSVG({
           transform: `scale(${scale})`,
           position: 'relative',
           width: '100%',
-          maxWidth: 360,
+          maxWidth: 600,
           aspectRatio: '1',
         }}
       >

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const childId = session.childId;
 
-  const [cycleRes, roundRes] = await Promise.all([
+  const [cycleRes, roundRes, realizedRes] = await Promise.all([
     supabase
       .from('child_growth_cycle')
       .select('missions_completed_in_cycle, last_growth_at')
@@ -31,16 +31,22 @@ export async function GET(request: NextRequest) {
       .maybeSingle(),
     supabase
       .from('child_wish_round')
-      .select('id, status, created_at')
+      .select('id, status, created_at, missions_required, missions_completed')
       .eq('child_id', childId)
       .in('status', ['generating', 'child_picking', 'child_picked', 'parent_choosing', 'parent_honored'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('child_wish_round')
+      .select('id', { count: 'exact', head: true })
+      .eq('child_id', childId)
+      .eq('status', 'realized'),
   ]);
 
   const cycle = cycleRes.data as { missions_completed_in_cycle?: number; last_growth_at?: string | null } | null;
-  const round = roundRes.data as { id: string; status: string; created_at: string } | null;
+  const round = roundRes.data as { id: string; status: string; created_at: string; missions_required: number; missions_completed: number } | null;
+  const realizedCount = realizedRes.count ?? 0;
   const missionsCompletedInCycle = cycle?.missions_completed_in_cycle ?? 0;
 
   let options: { id: string; label: string; theme_slug: string; selected_by_child: boolean }[] = [];
@@ -67,8 +73,11 @@ export async function GET(request: NextRequest) {
           id: round.id,
           status: round.status,
           created_at: round.created_at,
+          missions_required: round.missions_required,
+          missions_completed: round.missions_completed,
         }
       : null,
     options,
+    realizedCount,
   });
 }

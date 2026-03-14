@@ -12,6 +12,8 @@ export interface WishRound {
   status: string;
   created_at: string;
   honoredOption?: WishRoundHonoredOption;
+  missions_required: number;
+  missions_completed: number;
 }
 
 export interface WishRoundOption {
@@ -24,6 +26,7 @@ export interface WishRoundOption {
 export interface UseWishRoundsResult {
   rounds: WishRound[];
   activeRoundOptions: WishRoundOption[] | undefined;
+  realizedCount: number;
   isLoading: boolean;
   refetch: () => Promise<void>;
 }
@@ -39,6 +42,13 @@ export function useWishRounds(): UseWishRoundsResult {
       const res = await fetch('/api/wishes/rounds', { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) {
+        // Treat missing/expired child session as a soft, guest state instead of an error.
+        // (Message text can vary; the status is the stable signal.)
+        if (res.status === 401) {
+          setRounds([]);
+          setActiveRoundOptions(undefined);
+          return;
+        }
         throw new Error(data.error ?? 'Failed to load rounds');
       }
       setRounds(data.rounds ?? []);
@@ -56,5 +66,7 @@ export function useWishRounds(): UseWishRoundsResult {
     refetch();
   }, [refetch]);
 
-  return { rounds, activeRoundOptions, isLoading, refetch };
+  const realizedCount = rounds.filter((r) => r.status === 'realized').length;
+
+  return { rounds, activeRoundOptions, realizedCount, isLoading, refetch };
 }

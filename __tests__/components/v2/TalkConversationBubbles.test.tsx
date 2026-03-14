@@ -6,14 +6,14 @@ describe('TalkConversationBubbles', () => {
   it('shows placeholder when no messages', () => {
     render(<TalkConversationBubbles messages={[]} />);
     expect(
-      screen.getByText(/Shelly's words will appear here once you start a conversation/i),
+      screen.getByText(/Tap the button below to talk with Shelly\./i),
     ).toBeInTheDocument();
   });
 
   it('shows placeholder when messages is empty and pendingUserTranscript is empty', () => {
     render(<TalkConversationBubbles messages={[]} pendingUserTranscript={null} />);
     expect(
-      screen.getByText(/Shelly's words will appear here once you start a conversation/i),
+      screen.getByText(/Tap the button below to talk with Shelly\./i),
     ).toBeInTheDocument();
   });
 

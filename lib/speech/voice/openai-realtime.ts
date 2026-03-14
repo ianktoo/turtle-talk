@@ -42,7 +42,8 @@ function buildTools(): RealtimeTool[] {
       name: 'propose_missions',
       description:
         'Offer the child exactly 3 graded challenges — one easy, one medium, one stretch. ' +
-        'You MUST call this whenever you call end_conversation.',
+        'Call this when you want to offer missions — either during the conversation at a natural moment, or when wrapping up. ' +
+        'You do NOT need to end the conversation just because you proposed missions.',
       parameters: {
         type: 'object',
         properties: {
@@ -72,8 +73,9 @@ function buildTools(): RealtimeTool[] {
       type: 'function',
       name: 'end_conversation',
       description:
-        'Signal the conversation has reached a natural, warm close. ' +
-        'ALWAYS call propose_missions in the same response when you use this tool.',
+        'Signal the conversation has reached a warm, natural close. ' +
+        'Call this only after the child has had a chance to react to proposed missions (if any) and the conversation feels complete. ' +
+        'Say a warm goodbye that references what you talked about before calling this.',
       parameters: { type: 'object', properties: {} },
     },
     {

@@ -60,12 +60,20 @@ describe('LiveKitVoiceProvider', () => {
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            roomName: undefined,
-            participantName: 'child',
-          }),
         })
       );
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls[0] as [string, { body: string }];
+      const body = JSON.parse(options.body) as {
+        roomName?: string;
+        participantName?: string;
+        childName?: string;
+        topics?: string[];
+      };
+      expect(body.participantName).toBe('child');
+      expect(body.childName).toBe('little explorer');
+      expect(body.roomName).toBeUndefined();
+      expect(body.topics).toBeUndefined();
     });
 
     it('sends roomName when childName is provided', async () => {

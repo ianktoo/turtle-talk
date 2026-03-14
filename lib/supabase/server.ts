@@ -4,6 +4,7 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getAuthStorageKey } from './auth-storage-key';
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -16,8 +17,9 @@ export async function createClient() {
       'Missing Supabase env: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)'
     );
   }
-
+  const storageKey = getAuthStorageKey();
   return createServerClient(url, key, {
+    ...(storageKey ? { cookieOptions: { name: storageKey } } : {}),
     cookies: {
       getAll() {
         return cookieStore.getAll();

@@ -3,7 +3,7 @@ import { AccessToken, RoomConfiguration, RoomAgentDispatch } from 'livekit-serve
 
 /**
  * POST /api/livekit/token
- * Body: { roomName?: string, participantName?: string, childName?: string, topics?: string[] }
+ * Body: { roomName?, participantName?, childName?, topics?, ageGroup?, favoriteBook?, funFacts? }
  * Returns: { token, roomName } for the client to join the LiveKit room.
  * Requires LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL in env.
  */
@@ -33,9 +33,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const childName =
       typeof body.childName === 'string' && body.childName.trim() ? body.childName.trim() : 'little explorer';
     const topics = Array.isArray(body.topics) ? (body.topics as string[]).filter((t): t is string => typeof t === 'string') : [];
-    if (childName !== undefined || topics.length > 0) {
-      dispatchMetadata = JSON.stringify({ childName: childName ?? null, topics });
-    }
+    const ageGroup = typeof body.ageGroup === 'string' && body.ageGroup.trim() ? body.ageGroup.trim() : null;
+    const favoriteBook = typeof body.favoriteBook === 'string' && body.favoriteBook.trim() ? body.favoriteBook.trim() : null;
+    const funFacts = Array.isArray(body.funFacts) ? (body.funFacts as string[]).filter((f): f is string => typeof f === 'string') : [];
+    const meta: Record<string, unknown> = { childName: childName ?? null, topics };
+    if (ageGroup) meta.ageGroup = ageGroup;
+    if (favoriteBook) meta.favoriteBook = favoriteBook;
+    if (funFacts.length > 0) meta.funFacts = funFacts;
+    dispatchMetadata = JSON.stringify(meta);
   } catch {
     roomName = `talk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     participantName = 'child';

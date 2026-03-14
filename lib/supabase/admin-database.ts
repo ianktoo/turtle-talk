@@ -58,6 +58,9 @@ export interface AdminDatabase {
           invited_by: string | null;
           approved_at: string | null;
           approved_by: string | null;
+          demo_id: string | null;
+          converted_user_id: string | null;
+          converted_at: string | null;
         },
         Record<string, unknown>,
         Record<string, unknown>
@@ -159,6 +162,58 @@ export interface AdminDatabase {
         },
         { parent_id: string; child_id: string; type: string; payload?: Record<string, unknown>; read_at?: string | null },
         { read_at?: string | null }
+      >;
+      demo_sessions: TableShape<
+        {
+          demo_id: string;
+          created_at: string;
+          last_seen_at: string | null;
+          child_name: string | null;
+          age_group: string | null;
+          favorite_book: string | null;
+          fun_facts: string[] | null;
+          topics: string[] | null;
+          completed_missions_count: number | null;
+          wish_choice: string | null;
+          messages_summary: unknown;
+          parent_id: string | null;
+          child_id: string | null;
+          linked_at: string | null;
+          source: string | null;
+        },
+        {
+          demo_id: string;
+          created_at?: string;
+          last_seen_at?: string | null;
+          child_name?: string | null;
+          age_group?: string | null;
+          favorite_book?: string | null;
+          fun_facts?: string[] | null;
+          topics?: string[] | null;
+          completed_missions_count?: number | null;
+          wish_choice?: string | null;
+          messages_summary?: unknown;
+          parent_id?: string | null;
+          child_id?: string | null;
+          linked_at?: string | null;
+          source?: string | null;
+        },
+        {
+          created_at?: string;
+          last_seen_at?: string | null;
+          child_name?: string | null;
+          age_group?: string | null;
+          favorite_book?: string | null;
+          fun_facts?: string[] | null;
+          topics?: string[] | null;
+          completed_missions_count?: number | null;
+          wish_choice?: string | null;
+          messages_summary?: unknown;
+          parent_id?: string | null;
+          child_id?: string | null;
+          linked_at?: string | null;
+          source?: string | null;
+        }
       >;
     };
     Views: Record<string, never>;

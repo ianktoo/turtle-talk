@@ -13,6 +13,8 @@ export interface GardenStateRound {
   id: string;
   status: string;
   created_at: string;
+  missions_required: number;
+  missions_completed: number;
 }
 
 export interface GardenStateData {
@@ -20,6 +22,7 @@ export interface GardenStateData {
   lastGrowthAt: string | null;
   activeWishRound: GardenStateRound | null;
   options: GardenStateWishOption[];
+  realizedCount: number;
 }
 
 const defaultState: GardenStateData = {
@@ -27,6 +30,7 @@ const defaultState: GardenStateData = {
   lastGrowthAt: null,
   activeWishRound: null,
   options: [],
+  realizedCount: 0,
 };
 
 export function useGardenState(enabled: boolean) {
@@ -52,6 +56,7 @@ export function useGardenState(enabled: boolean) {
         lastGrowthAt: json.lastGrowthAt ?? null,
         activeWishRound: json.activeWishRound ?? null,
         options: json.options ?? [],
+        realizedCount: json.realizedCount ?? 0,
       });
     } catch (e) {
       console.error('[useGardenState]', e);

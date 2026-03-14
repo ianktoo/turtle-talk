@@ -59,7 +59,7 @@ beforeEach(() => {
       text: async () => 'answer-sdp',
     });
 
-  process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL = 'gpt-4o-mini-realtime-preview';
+  process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL = 'gpt-realtime-1.5';
   process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE = 'sage';
 });
 

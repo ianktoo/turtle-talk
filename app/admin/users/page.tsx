@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { AdminPageHeader } from '@/app/components/admin/AdminPageHeader';
+import { checkResponseForInvalidSession } from '@/lib/auth-client';
 
 interface AdminUser {
   id: string;
@@ -85,6 +86,48 @@ function UserModal({ user, onClose, onUpdated }: UserModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  const [sessionActive, setSessionActive] = useState<boolean | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [signOutSuccess, setSignOutSuccess] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSessionsLoading(true);
+    fetch(`/api/admin/users/${user.id}/sessions`, { credentials: 'include' })
+      .then(async (res) => {
+        if (await checkResponseForInvalidSession(res)) return;
+        if (!res.ok) return;
+        const d = await res.json();
+        if (!cancelled) setSessionActive((d as { active?: boolean }).active ?? false);
+      })
+      .catch(() => { if (!cancelled) setSessionActive(false); })
+      .finally(() => { if (!cancelled) setSessionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [user.id]);
+
+  async function signOutUser() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/sign-out`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (await checkResponseForInvalidSession(res)) return;
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError((d as { error?: string }).error ?? 'Failed to sign out user');
+        return;
+      }
+      setSignOutSuccess(true);
+      setSessionActive(false);
+      setTimeout(() => setSignOutSuccess(false), 3000);
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function patch(body: Record<string, unknown>): Promise<boolean> {
     setLoading(true);
@@ -96,6 +139,7 @@ function UserModal({ user, onClose, onUpdated }: UserModalProps) {
         credentials: 'include',
         body: JSON.stringify(body),
       });
+      if (await checkResponseForInvalidSession(res)) return false;
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         setError((d as { error?: string }).error ?? 'Update failed');
@@ -132,6 +176,7 @@ function UserModal({ user, onClose, onUpdated }: UserModalProps) {
         method: 'POST',
         credentials: 'include',
       });
+      if (await checkResponseForInvalidSession(res)) return;
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         setError((d as { error?: string }).error ?? 'Could not send reset email');
@@ -236,6 +281,19 @@ function UserModal({ user, onClose, onUpdated }: UserModalProps) {
                 value={<span style={{ fontSize: 13, color: 'var(--pd-error)' }}>{formatDate(user.suspended_at)}</span>}
               />
             )}
+            <InfoRow
+              label="Session"
+              value={
+                sessionsLoading
+                  ? <span style={{ fontSize: 13, color: 'var(--pd-text-tertiary)' }}>…</span>
+                  : sessionActive
+                    ? <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 500 }}>Logged in</span>
+                    : <span style={{ fontSize: 13, color: 'var(--pd-text-tertiary)' }}>No active session</span>
+              }
+            />
+            <div style={{ fontSize: 11, color: 'var(--pd-text-tertiary)', marginTop: 4 }}>
+              Session length (JWT/refresh token) is set project-wide in Supabase Dashboard → Authentication → Settings.
+            </div>
           </div>
 
           {/* Access status selector */}
@@ -323,6 +381,33 @@ function UserModal({ user, onClose, onUpdated }: UserModalProps) {
             {loading ? 'Sending…' : 'Send password reset email'}
           </button>
 
+          {/* Sign out user (revoke sessions) */}
+          <button
+            type="button"
+            onClick={signOutUser}
+            disabled={loading}
+            style={{
+              width: '100%', padding: '11px 8px', borderRadius: 10,
+              border: '1px solid rgba(217,119,6,0.35)',
+              background: 'rgba(217,119,6,0.07)',
+              color: '#d97706',
+              fontSize: 13, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              transition: 'opacity 0.15s',
+            }}
+          >
+            {loading ? '…' : 'Sign out user (revoke all sessions)'}
+          </button>
+
+          {signOutSuccess && (
+            <div style={{
+              fontSize: 13, color: '#16a34a', textAlign: 'center',
+              padding: '8px 12px', background: 'rgba(22,163,74,0.08)', borderRadius: 8,
+            }}>
+              User signed out; their sessions have been revoked.
+            </div>
+          )}
+
           {resetSent && (
             <div style={{
               fontSize: 13, color: '#16a34a', textAlign: 'center',
@@ -355,8 +440,14 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetch('/api/admin/users', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((d) => setUsers((d as { users: AdminUser[] }).users ?? []))
+      .then(async (res) => {
+        if (await checkResponseForInvalidSession(res)) return;
+        if (!res.ok) throw new Error('Failed to load');
+        return res.json();
+      })
+      .then((d) => {
+        if (d) setUsers((d as { users: AdminUser[] }).users ?? []);
+      })
       .catch(() => setFetchError('Failed to load users'))
       .finally(() => setLoading(false));
   }, []);

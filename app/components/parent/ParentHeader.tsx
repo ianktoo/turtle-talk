@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ChevronDown, Users, UserPlus, LogOut } from 'lucide-react';
 import type { Child } from './ChildSwitcher';
@@ -35,15 +35,37 @@ export function ParentHeader({
   onCloseChildrenModal,
 }: ParentHeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [me, setMe] = useState<ParentMe | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
     fetch('/api/parent/me', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setMe(data));
-  }, []);
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          setMe(data as ParentMe);
+        } else {
+          setMe(null);
+          if (res.status === 401) {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            if (pathname?.startsWith('/parent') || pathname?.startsWith('/admin')) {
+              router.replace('/login');
+            }
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMe(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, router]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

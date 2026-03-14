@@ -85,6 +85,12 @@ export class LocalStorageDatabaseService implements DatabaseService {
     );
   }
 
+  async clearMissions(childId: string): Promise<void> {
+    try {
+      localStorage.removeItem(key(childId, 'missions'));
+    } catch { /* ignore */ }
+  }
+
   getMemorySync(childId: string): ChildMemory | null {
     if (typeof window === 'undefined') return null;
     return {
