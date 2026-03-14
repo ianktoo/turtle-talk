@@ -95,6 +95,7 @@ export default function AdminTattleCardsPage() {
         credentials: 'include',
         body: JSON.stringify(updated),
       });
+      if (await checkResponseForInvalidSession(res)) return;
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || 'Failed to save settings');
@@ -120,6 +121,7 @@ export default function AdminTattleCardsPage() {
         credentials: 'include',
         body: JSON.stringify({ id: card.id, isActive: newActive }),
       });
+      if (await checkResponseForInvalidSession(res)) return;
       if (!res.ok) {
         setCards((prev) =>
           prev.map((c) =>
@@ -147,6 +149,7 @@ export default function AdminTattleCardsPage() {
         credentials: 'include',
         body: JSON.stringify(editingCard),
       });
+      if (await checkResponseForInvalidSession(res)) return;
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || 'Failed to save card');
@@ -169,6 +172,7 @@ export default function AdminTattleCardsPage() {
         method: 'DELETE',
         credentials: 'include',
       });
+      if (await checkResponseForInvalidSession(res)) return;
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || 'Failed to delete');

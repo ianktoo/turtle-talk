@@ -25,7 +25,8 @@ export default function SessionSettingsPage() {
         return res.json();
       })
       .then((data) => {
-        if (data) setSettings(data);
+        if (data == null) return;
+        setSettings(data);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
