@@ -134,6 +134,10 @@ export interface DemoSession {
    * ISO timestamp of when consent was given.
    */
   consentedAt?: string;
+  /**
+   * Which sub-step of the child profile wizard the child is on.
+   */
+  profileSubstep?: 'name' | 'age' | 'book' | 'facts';
 }
 
 const STORAGE_KEY = 'turtle-talk-demo-session-v1';

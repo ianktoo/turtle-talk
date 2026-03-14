@@ -1418,7 +1418,38 @@ function FunFactsBubbles(props: {
   newFact: string;
   onChangeNewFact: (value: string) => void;
 }) {
-  const presets = ['I love dinosaurs', 'I can whistle', 'I like drawing', 'I love Lego'];
+  const presets = [
+    'I love dinosaurs',
+    'I can whistle',
+    'I like drawing',
+    'I love Lego',
+    "I'm a fast runner",
+    'I love animals',
+    'I like to dance',
+    'I tell funny jokes',
+    'I love reading',
+    'I play sports',
+    'I like building things',
+    'I love music',
+    'I speak two languages',
+    'I can do a cartwheel',
+    "I'm a great swimmer",
+    'I love cooking',
+    'I know a magic trick',
+    'I can ride a bike with no hands',
+    'I have a pet',
+    'I love outer space',
+    'I can make people laugh',
+    "I'm really good at puzzles",
+    'I love superheroes',
+    'I help my friends',
+    'I love nature',
+    'I can climb really high',
+    'I love making up stories',
+    "I'm learning an instrument",
+    'I love video games',
+    'I can do a funny voice',
+  ];
 
   const toggle = (fact: string) => {
     if (props.selected.includes(fact)) {
@@ -1509,8 +1540,15 @@ function ChildProfileWizard(props: {
   onChangeNewFunFact: (value: string) => void;
   onBack?: () => void;
   onComplete: () => void;
+  initialSubstep?: ProfileSubstep;
+  onSubstepChange?: (substep: ProfileSubstep) => void;
 }) {
-  const [substep, setSubstep] = useState<ProfileSubstep>('name');
+  const [substep, setSubstepRaw] = useState<ProfileSubstep>(props.initialSubstep ?? 'name');
+
+  const setSubstep = (next: ProfileSubstep) => {
+    setSubstepRaw(next);
+    props.onSubstepChange?.(next);
+  };
 
   const substepIdx = PROFILE_SUBSTEPS.indexOf(substep);
   const hasPrev = substepIdx > 0;
@@ -1941,7 +1979,21 @@ export default function DemoFlow() {
 
   const [voiceProvider, setVoiceProvider] = useState(() => createVoiceProvider());
 
-  const [pendingMissionChoices, setPendingMissionChoices] = useState<MissionSuggestion[] | null>(null);
+  const PENDING_MISSIONS_KEY = 'turtle-talk-demo-pending-missions';
+  const [pendingMissionChoices, setPendingMissionChoicesRaw] = useState<MissionSuggestion[] | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(PENDING_MISSIONS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const updatePendingMissions = useCallback((choices: MissionSuggestion[] | null) => {
+    setPendingMissionChoicesRaw(choices);
+    try {
+      if (choices) window.localStorage.setItem(PENDING_MISSIONS_KEY, JSON.stringify(choices));
+      else window.localStorage.removeItem(PENDING_MISSIONS_KEY);
+    } catch {}
+  }, []);
   const pendingChoices: DemoMissionChoice[] = useMemo(
     () => (pendingMissionChoices ?? []).map((c, i) => ({ ...c, __index: i })),
     [pendingMissionChoices],
@@ -1966,7 +2018,7 @@ export default function DemoFlow() {
     onTopic: saveTopic,
     onMessagesChange: saveMessages,
     onMissionChoices: (choices) => {
-      setPendingMissionChoices(choices);
+      updatePendingMissions(choices);
     },
   });
 
@@ -2076,7 +2128,7 @@ export default function DemoFlow() {
       if (data.childName) saveChildName(data.childName);
       if (data.topic) saveTopic(data.topic);
       if (data.missionChoices?.length) {
-        setPendingMissionChoices(data.missionChoices);
+        updatePendingMissions(data.missionChoices);
         updateSession({ step: 'missionsPick' });
       }
       setTypedInput('');
@@ -2094,7 +2146,7 @@ export default function DemoFlow() {
     const fresh = createFreshDemoSession();
     fresh.step = getFirstStep(SKIPPED_STEPS);
     setSession(fresh);
-    setPendingMissionChoices(null);
+    updatePendingMissions(null);
     clearAll();
     resetGuestWishes();
     guestWishes.regenerate();
@@ -2131,10 +2183,10 @@ export default function DemoFlow() {
   }, [callActive, pendingMissionChoices, step, updateSession]);
 
   useEffect(() => {
-    if (step === 'missionsPick' && pendingMissionChoices == null) {
+    if (step === 'missionsPick' && pendingMissionChoices == null && activeMissions.length === 0) {
       updateSession({ step: 'childCourageConversation' });
     }
-  }, [pendingMissionChoices, step, updateSession]);
+  }, [pendingMissionChoices, activeMissions.length, step, updateSession]);
 
   // Navigation helpers that respect the step ordering
   const previousStep = getPreviousStep(step, SKIPPED_STEPS);
@@ -2382,6 +2434,8 @@ export default function DemoFlow() {
                 onChangeNewFunFact={setNewFunFact}
                 onBack={previousStep ? goBack : undefined}
                 onComplete={goForward}
+                initialSubstep={session.profileSubstep}
+                onSubstepChange={(s) => updateSession({ profileSubstep: s })}
               />
             </div>
           )}
@@ -2414,25 +2468,25 @@ export default function DemoFlow() {
           {/* ---- missionsPick modal ---- */}
           {step === 'missionsPick' && pendingChoices.length > 0 && !callActive && (
             <ModalBackdrop onClose={() => {
-              setPendingMissionChoices(null);
+              updatePendingMissions(null);
               updateSession({ step: 'wish', missionStatus: 'dismissed' });
             }}>
               <div style={{ padding: 20, maxHeight: '80vh', overflowY: 'auto' }}>
                 <MissionChoicesCard
                   choices={pendingChoices}
                   onDismiss={() => {
-                    setPendingMissionChoices(null);
+                    updatePendingMissions(null);
                     updateSession({ step: 'wish', missionStatus: 'dismissed' });
                   }}
                   onTalkMore={() => {
-                    setPendingMissionChoices(null);
+                    updatePendingMissions(null);
                     updateSession({ step: 'childCourageConversation' });
                     void voice.startListening();
                   }}
                   onHelp={() => setHelpSection('missions')}
                   onAccept={(choice) => {
                     addMission(choice);
-                    setPendingMissionChoices(null);
+                    updatePendingMissions(null);
                     updateSession({ step: 'missionDo', missionStatus: 'active' });
                   }}
                 />
@@ -2720,7 +2774,7 @@ export default function DemoFlow() {
         </div>
       </main>
 
-      {/* Bottom bar with voice controls -- centered column layout */}
+      {/* Bottom bar with voice controls -- vertical column layout */}
       {(step === 'childCourageConversation' || (step === 'missionsPick' && callActive)) && (
         <div
           style={{
@@ -2732,26 +2786,19 @@ export default function DemoFlow() {
             padding: 'max(16px, env(safe-area-inset-bottom)) 20px',
             background: 'linear-gradient(to top, rgba(10,10,14,0.92) 60%, transparent)',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 16,
+            gap: 14,
           }}
         >
-          {previousStep && (
-            <PrimaryButton
-              tone="ghost"
-              onClick={goBack}
-              style={{ fontSize: 13, padding: '8px 12px' }}
-            >
-              Back
-            </PrimaryButton>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          {/* Primary row: mute + call button -- prominent green */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            <TalkMuteToggle isMuted={voice.isMuted} onToggle={voice.toggleMute} callActive={callActive} />
             <TalkEndCallButton
               state={voice.state}
               hasError={hasError}
               missionGenerated={!!pendingMissionChoices && callActive}
+              label="Tap to talk to Shelly"
               onEnd={() => {
                 voice.endConversation();
                 const dest: DemoStep = pendingChoices.length > 0 ? 'missionsPick' : 'wish';
@@ -2760,19 +2807,31 @@ export default function DemoFlow() {
               onRetry={voice.startListening}
               onStart={voice.startListening}
             />
-            <TalkMuteToggle isMuted={voice.isMuted} onToggle={voice.toggleMute} callActive={callActive} />
           </div>
 
+          {/* Secondary row: back / next navigation (smaller, below call button) */}
           {!callActive && (
-            <PrimaryButton
-              onClick={() => {
-                const dest = pendingChoices.length > 0 ? 'missionsPick' : 'wish';
-                updateSession({ step: dest as DemoStep });
-              }}
-              style={{ fontSize: 13, padding: '8px 12px' }}
-            >
-              Next
-            </PrimaryButton>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, opacity: 0.85 }}>
+              {previousStep && (
+                <PrimaryButton
+                  tone="ghost"
+                  onClick={goBack}
+                  style={{ fontSize: 12, padding: '6px 10px' }}
+                >
+                  Back
+                </PrimaryButton>
+              )}
+              <PrimaryButton
+                tone="ghost"
+                onClick={() => {
+                  const dest = pendingChoices.length > 0 ? 'missionsPick' : 'wish';
+                  updateSession({ step: dest as DemoStep });
+                }}
+                style={{ fontSize: 12, padding: '6px 10px' }}
+              >
+                Skip &rarr;
+              </PrimaryButton>
+            </div>
           )}
         </div>
       )}

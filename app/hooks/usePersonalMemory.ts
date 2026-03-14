@@ -31,8 +31,8 @@ export function usePersonalMemory(childId?: string) {
 
   const saveChildName = useCallback(
     (name: string) => {
-      setChildName(name);
       const trimmed = name.trim();
+      setChildName(trimmed || null);
       if (trimmed) {
         void db.saveChildName(id, trimmed).catch(() => {/* ignore */});
       }

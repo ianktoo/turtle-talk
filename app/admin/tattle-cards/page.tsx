@@ -98,7 +98,10 @@ export default function AdminTattleCardsPage() {
         credentials: 'include',
         body: JSON.stringify(updated),
       });
-      if (await checkResponseForInvalidSession(res)) return;
+      if (await checkResponseForInvalidSession(res)) {
+        setSettings(settings);
+        return;
+      }
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || 'Failed to save settings');
@@ -124,7 +127,14 @@ export default function AdminTattleCardsPage() {
         credentials: 'include',
         body: JSON.stringify({ id: card.id, isActive: newActive }),
       });
-      if (await checkResponseForInvalidSession(res)) return;
+      if (await checkResponseForInvalidSession(res)) {
+        setCards((prev) =>
+          prev.map((c) =>
+            c.id === card.id ? { ...c, isActive: card.isActive } : c,
+          ),
+        );
+        return;
+      }
       if (!res.ok) {
         setCards((prev) =>
           prev.map((c) =>
