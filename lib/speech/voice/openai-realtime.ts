@@ -279,10 +279,10 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
         const transcript = event.transcript as string;
         if (transcript?.trim()) {
           this.emit('userTranscript', transcript);
-          this.messages = [
+          this.messages = ([
             ...this.messages,
-            { role: 'user', content: transcript },
-          ].slice(-MAX_CONVERSATION_MESSAGES);
+            { role: 'user' as const, content: transcript },
+          ]).slice(-MAX_CONVERSATION_MESSAGES);
           this.emit('messages', this.messages);
         }
         break;
@@ -291,10 +291,10 @@ export class OpenAIRealtimeVoiceProvider extends BaseVoiceProvider {
       case 'response.audio_transcript.done': {
         const assistantText = event.transcript as string;
         if (assistantText?.trim()) {
-          this.messages = [
+          this.messages = ([
             ...this.messages,
-            { role: 'assistant', content: assistantText },
-          ].slice(-MAX_CONVERSATION_MESSAGES);
+            { role: 'assistant' as const, content: assistantText },
+          ]).slice(-MAX_CONVERSATION_MESSAGES);
           this.emit('messages', this.messages);
         }
         break;

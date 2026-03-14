@@ -40,6 +40,9 @@ import MicPermissionV2 from '@/app/v2/components/MicPermissionV2';
 import { useMicPermission } from '@/app/hooks/useMicPermission';
 import QRCode from 'react-qr-code';
 import confetti from 'canvas-confetti';
+import { useGuestWishes } from '@/app/hooks/useGuestWishes';
+import { resetGuestWishes } from '@/lib/db/providers/localStorage';
+import { getThemeLabel } from '@/lib/wishes/thematic-areas';
 
 type DemoMissionChoice = MissionSuggestion & { __index: number };
 
@@ -1934,6 +1937,8 @@ export default function DemoFlow() {
   const { activeMissions, completedMissions, addMission, completeMission, deleteMission } =
     useMissions(undefined);
 
+  const guestWishes = useGuestWishes();
+
   const [voiceProvider, setVoiceProvider] = useState(() => createVoiceProvider());
 
   const [pendingMissionChoices, setPendingMissionChoices] = useState<MissionSuggestion[] | null>(null);
@@ -2091,6 +2096,8 @@ export default function DemoFlow() {
     setSession(fresh);
     setPendingMissionChoices(null);
     clearAll();
+    resetGuestWishes();
+    guestWishes.regenerate();
     earlyPersistDone.current = false;
     try {
       const db = getGuestDb();
@@ -2099,7 +2106,7 @@ export default function DemoFlow() {
     } catch {
       // ignore
     }
-  }, [clearAll, voice]);
+  }, [clearAll, voice, guestWishes]);
 
   // Auto-advance past skipped steps
   useEffect(() => {
@@ -2491,67 +2498,154 @@ export default function DemoFlow() {
 
               {/* ---- wish ---- */}
               {step === 'wish' && (
-                <div style={{ display: 'grid', gap: 12, width: '100%' }}>
-                  <Card title="Make a wish">
-                    <div style={{ display: 'grid', gap: 10 }}>
-                      <InfoHint text="Pick how you'd like to make your wish!" />
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: 8,
-                          marginTop: 6,
-                        }}
+                <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 500, justifySelf: 'center' }}>
+                  {guestWishes.completed ? (
+                    <>
+                      <Card title="Your wishes are in!">
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          <InfoHint text="Nice picks! Your grown-up will see these and choose one to make come true." />
+                          <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
+                            {guestWishes.options
+                              .filter((o) => guestWishes.selectedIds.has(o.id))
+                              .map((o) => (
+                                <div
+                                  key={o.id}
+                                  style={{
+                                    padding: '10px 14px',
+                                    borderRadius: 14,
+                                    border: '2px solid rgba(140,120,255,0.7)',
+                                    background: 'rgba(140,120,255,0.14)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 700, fontSize: 14 }}>{o.label}</span>
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      color: 'rgba(200,210,255,0.85)',
+                                      fontWeight: 600,
+                                      padding: '2px 7px',
+                                      background: 'rgba(255,255,255,0.10)',
+                                      borderRadius: 6,
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {getThemeLabel(o.theme_slug)}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </Card>
+                      <StepNavigation
+                        onPrevious={previousStep ? goBack : undefined}
+                        onNext={goForward}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Card
+                        title="Make a wish!"
+                        right={
+                          <button
+                            type="button"
+                            onClick={guestWishes.regenerate}
+                            style={{
+                              appearance: 'none',
+                              border: 'none',
+                              background: 'transparent',
+                              color: 'var(--v2-text-secondary)',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: 12,
+                              textDecoration: 'underline',
+                            }}
+                          >
+                            New wishes
+                          </button>
+                        }
                       >
-                        {[
-                          { id: 'solo' as const, label: 'Just me (solo)' },
-                          { id: 'withParent' as const, label: 'With my grown-up' },
-                          { id: 'withFriend' as const, label: 'With a friend' },
-                        ].map((opt) => {
-                          const active = session.wishChoice === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => {
-                                if (session.wishChoice !== opt.id && typeof window !== 'undefined') {
-                                  void confetti({
-                                    particleCount: 60,
-                                    spread: 60,
-                                    startVelocity: 35,
-                                    gravity: 0.9,
-                                    origin: { y: 0.85 },
-                                  });
-                                }
-                                updateSession({ wishChoice: opt.id });
-                              }}
-                              style={{
-                                flex: '1 1 150px',
-                                minWidth: 0,
-                                padding: '8px 10px',
-                                borderRadius: 999,
-                                border: active
-                                  ? '2px solid rgba(140,120,255,0.95)'
-                                  : '1px solid rgba(255,255,255,0.20)',
-                                background: active ? 'rgba(140,120,255,0.22)' : 'rgba(255,255,255,0.06)',
-                                cursor: 'pointer',
-                                color: 'var(--v2-text)',
-                                fontSize: 13,
-                                fontWeight: 600,
-                                textAlign: 'center',
-                              }}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </Card>
-                  <StepNavigation
-                    onPrevious={previousStep ? goBack : undefined}
-                    onNext={goForward}
-                  />
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          <InfoHint text="Tap your 3 favourites, then submit!" />
+                          <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
+                            {guestWishes.options.map((opt) => {
+                              const sel = guestWishes.selectedIds.has(opt.id);
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => guestWishes.toggle(opt.id)}
+                                  style={{
+                                    appearance: 'none',
+                                    width: '100%',
+                                    padding: '12px 14px',
+                                    borderRadius: 14,
+                                    border: sel
+                                      ? '2px solid rgba(140,120,255,0.95)'
+                                      : '1px solid rgba(255,255,255,0.16)',
+                                    background: sel ? 'rgba(140,120,255,0.18)' : 'rgba(255,255,255,0.04)',
+                                    cursor: 'pointer',
+                                    color: 'var(--v2-text)',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    transition: 'border-color 120ms, background 120ms',
+                                  }}
+                                >
+                                  <span style={{ fontWeight: sel ? 750 : 600, fontSize: 14 }}>
+                                    {opt.label}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      color: 'rgba(200,210,255,0.75)',
+                                      fontWeight: 600,
+                                      padding: '2px 7px',
+                                      background: 'rgba(255,255,255,0.08)',
+                                      borderRadius: 6,
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {getThemeLabel(opt.theme_slug)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <PrimaryButton
+                            disabled={guestWishes.selectedIds.size !== 3}
+                            onClick={() => {
+                              guestWishes.submit();
+                              if (typeof window !== 'undefined') {
+                                void confetti({
+                                  particleCount: 80,
+                                  spread: 70,
+                                  startVelocity: 35,
+                                  gravity: 0.9,
+                                  origin: { y: 0.85 },
+                                });
+                              }
+                            }}
+                            style={{
+                              marginTop: 4,
+                              opacity: guestWishes.selectedIds.size === 3 ? 1 : 0.5,
+                            }}
+                          >
+                            {`Submit ${guestWishes.selectedIds.size}/3`}
+                          </PrimaryButton>
+                        </div>
+                      </Card>
+                      <StepNavigation
+                        onPrevious={previousStep ? goBack : undefined}
+                        onNext={goForward}
+                      />
+                    </>
+                  )}
                 </div>
               )}
 

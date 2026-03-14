@@ -166,9 +166,9 @@ export class LiveKitVoiceProvider extends BaseVoiceProvider {
     switch (message.type) {
       case 'transcript': {
         if (typeof message.text !== 'string') return;
-        const role = message.role === 'assistant' ? 'assistant' : 'user';
+        const role: Message['role'] = message.role === 'assistant' ? 'assistant' : 'user';
         this.emit('userTranscript', message.text);
-        this._messages = [...this._messages, { role, content: message.text }].slice(-MAX_CONVERSATION_MESSAGES);
+        this._messages = [...this._messages, { role, content: message.text }].slice(-MAX_CONVERSATION_MESSAGES) as Message[];
         this.emit('messages', this._messages);
         break;
       }
