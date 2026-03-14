@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminOptional } from '@/lib/supabase/server-admin';
 
+interface DemoSessionRow {
+  demo_id: string;
+  child_name: string | null;
+  age_group: string | null;
+  favorite_book: string | null;
+  fun_facts: string[] | null;
+  completed_missions_count: number | null;
+  wish_choice: string | null;
+  topics: string[] | null;
+  messages_summary: unknown;
+  created_at: string | null;
+  last_seen_at: string | null;
+}
+
 /**
  * GET /api/demo/session/[demoId]
  * Returns a summarized view of the child demo session for the parent.
@@ -20,9 +34,9 @@ export async function GET(
     return NextResponse.json({ error: 'Demo storage not configured' }, { status: 503 });
   }
 
-  const { data, error } = await admin
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('demo_sessions' as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = (await (admin as any)
+    .from('demo_sessions')
     .select(
       [
         'demo_id',
@@ -39,7 +53,7 @@ export async function GET(
       ].join(', '),
     )
     .eq('demo_id', demoId)
-    .maybeSingle();
+    .maybeSingle()) as { data: DemoSessionRow | null; error: { message: string } | null };
 
   if (error) {
     console.error('[demo/session] GET', error);
@@ -53,17 +67,17 @@ export async function GET(
   return NextResponse.json(
     {
       session: {
-        demoId: data.demo_id as string,
-        childName: (data.child_name ?? null) as string | null,
-        ageGroup: (data.age_group ?? null) as string | null,
-        favoriteBook: (data.favorite_book ?? null) as string | null,
-        funFacts: (data.fun_facts ?? null) as string[] | null,
-        completedMissionsCount: (data.completed_missions_count ?? null) as number | null,
-        wishChoice: (data.wish_choice ?? null) as string | null,
-        topics: (data.topics ?? null) as string[] | null,
+        demoId: data.demo_id,
+        childName: data.child_name ?? null,
+        ageGroup: data.age_group ?? null,
+        favoriteBook: data.favorite_book ?? null,
+        funFacts: data.fun_facts ?? null,
+        completedMissionsCount: data.completed_missions_count ?? null,
+        wishChoice: data.wish_choice ?? null,
+        topics: data.topics ?? null,
         messagesSummary: data.messages_summary ?? null,
-        createdAt: (data.created_at ?? null) as string | null,
-        lastSeenAt: (data.last_seen_at ?? null) as string | null,
+        createdAt: data.created_at ?? null,
+        lastSeenAt: data.last_seen_at ?? null,
       },
     },
     { status: 200 },

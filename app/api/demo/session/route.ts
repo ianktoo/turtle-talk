@@ -60,12 +60,12 @@ export async function POST(request: NextRequest) {
     record.parent_wants_full_version = body.parentWantsFullVersion ?? null;
   }
 
-  const { data, error } = await admin
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('demo_sessions' as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = (await (admin as any)
+    .from('demo_sessions')
     .upsert(record, { onConflict: 'demo_id' })
     .select('demo_id')
-    .maybeSingle();
+    .maybeSingle()) as { data: { demo_id: string } | null; error: { message: string } | null };
 
   if (error) {
     console.error('[demo/session] POST', error);

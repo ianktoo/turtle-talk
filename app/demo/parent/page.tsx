@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Html5Qrcode } from 'html5-qrcode';
 import booksData from '@/app/placeholders/books.json';
@@ -943,6 +943,14 @@ function ConversionCTA({
 // ---------------------------------------------------------------------------
 
 export default function DemoParentPage() {
+  return (
+    <Suspense>
+      <DemoParentPageInner />
+    </Suspense>
+  );
+}
+
+function DemoParentPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 

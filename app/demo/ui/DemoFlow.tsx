@@ -130,7 +130,7 @@ function DemoShell(props: { children: React.ReactNode; onResetAll: () => void; t
   );
 }
 
-function Card(props: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+function Card(props: { title?: string; children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <section
       style={{
@@ -140,11 +140,13 @@ function Card(props: { title: string; children: React.ReactNode; right?: React.R
         padding: 16,
       }}
     >
-      <header style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0, fontSize: 16, letterSpacing: 0.2 }}>{props.title}</h2>
-        {props.right}
-      </header>
-      <div style={{ marginTop: 12 }}>{props.children}</div>
+      {(props.title || props.right) && (
+        <header style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0, fontSize: 16, letterSpacing: 0.2 }}>{props.title}</h2>
+          {props.right}
+        </header>
+      )}
+      <div style={{ marginTop: props.title || props.right ? 12 : 0 }}>{props.children}</div>
     </section>
   );
 }
