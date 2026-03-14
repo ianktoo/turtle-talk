@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createVoiceProvider } from '@/lib/speech/voice';
+import { createVoiceProvider, createFreshVoiceProvider } from '@/lib/speech/voice';
 import { useVoiceSession } from '@/app/hooks/useVoiceSession';
 import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
 import { useMissions } from '@/app/hooks/useMissions';
@@ -1934,8 +1934,7 @@ export default function DemoFlow() {
   const { activeMissions, completedMissions, addMission, completeMission, deleteMission } =
     useMissions(undefined);
 
-  const providerRef = useRef<ReturnType<typeof createVoiceProvider> | null>(null);
-  if (!providerRef.current) providerRef.current = createVoiceProvider();
+  const [voiceProvider, setVoiceProvider] = useState(() => createVoiceProvider());
 
   const [pendingMissionChoices, setPendingMissionChoices] = useState<MissionSuggestion[] | null>(null);
   const pendingChoices: DemoMissionChoice[] = useMemo(
@@ -1948,7 +1947,7 @@ export default function DemoFlow() {
 
   const activeMission = activeMissions[0] ?? null;
 
-  const voice = useVoiceSession(providerRef.current, {
+  const voice = useVoiceSession(voiceProvider, {
     autoConnect: step === 'childCourageConversation' && status === 'granted',
     initialMessages: savedMessages,
     childName,
@@ -2084,12 +2083,15 @@ export default function DemoFlow() {
   const goNext = useCallback((next: DemoStep) => updateSession({ step: next }), [updateSession]);
 
   const resetAll = useCallback(() => {
+    voice.resetSession();
+    setVoiceProvider(createFreshVoiceProvider());
     clearDemoSession();
     const fresh = createFreshDemoSession();
     fresh.step = getFirstStep(SKIPPED_STEPS);
     setSession(fresh);
     setPendingMissionChoices(null);
     clearAll();
+    earlyPersistDone.current = false;
     try {
       const db = getGuestDb();
       const id = typeof window !== 'undefined' ? getDeviceId() : 'default';
@@ -2097,7 +2099,7 @@ export default function DemoFlow() {
     } catch {
       // ignore
     }
-  }, [clearAll]);
+  }, [clearAll, voice]);
 
   // Auto-advance past skipped steps
   useEffect(() => {

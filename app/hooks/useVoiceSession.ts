@@ -32,6 +32,8 @@ interface UseVoiceSessionResult {
   startListening: () => Promise<void>;
   toggleMute: () => void;
   endConversation: () => void;
+  /** Stop the provider, clear all local state, and allow autoConnect to fire again on next session. */
+  resetSession: () => void;
 }
 
 /**
@@ -169,5 +171,20 @@ export function useVoiceSession(
     provider.stop();
   }, [provider]);
 
-  return { state, mood, messages, pendingUserTranscript, isMuted, error, isMeaningful, startListening, toggleMute, endConversation };
+  const resetSession = useCallback(() => {
+    provider.stop();
+    setState('idle');
+    setMood('idle');
+    setMessages([]);
+    setPendingUserTranscript(null);
+    setIsMuted(false);
+    setError(null);
+    setIsMeaningful(false);
+    callStartRef.current = null;
+    if (meaningfulTimerRef.current) clearTimeout(meaningfulTimerRef.current);
+    meaningfulTimerRef.current = null;
+    autoConnectDoneRef.current = false;
+  }, [provider]);
+
+  return { state, mood, messages, pendingUserTranscript, isMuted, error, isMeaningful, startListening, toggleMute, endConversation, resetSession };
 }
