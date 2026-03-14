@@ -18,6 +18,9 @@ export interface VoiceSessionOptions {
   difficultyProfile?: 'beginner' | 'intermediate' | 'confident';
   /** The child's currently active challenge — shown to the agent each turn for coaching */
   activeMission?: Mission | null;
+  ageGroup?: string | null;
+  favoriteBook?: string | null;
+  funFacts?: string[];
 }
 
 /** Payload for an app-side tool call requested by a voice provider (e.g. LiveKit agent). */

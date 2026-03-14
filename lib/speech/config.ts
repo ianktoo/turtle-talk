@@ -7,7 +7,7 @@
  *   NEXT_PUBLIC_VOICE_PROVIDER=vapi        — Vapi WebRTC + /api/vapi/llm
  *   NEXT_PUBLIC_VOICE_PROVIDER=gemini-live — Gemini Live API (real-time bidirectional)
  *   NEXT_PUBLIC_VOICE_PROVIDER=livekit     — LiveKit room + agent (Chirp STT, Gemini LLM/TTS)
- *   NEXT_PUBLIC_VOICE_PROVIDER=openai-realtime — OpenAI WebRTC Realtime API (gpt-4o-mini-realtime-preview)
+ *   NEXT_PUBLIC_VOICE_PROVIDER=openai-realtime — OpenAI WebRTC Realtime API (gpt-realtime-1.5)
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * STT PROVIDER  (SPEECH_STT_PROVIDER)
@@ -129,7 +129,8 @@ export const speechConfig = {
   },
 
   openaiRealtime: {
-    model: process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-4o-mini-realtime-preview',
+    // Default to GA realtime model; override with NEXT_PUBLIC_OPENAI_REALTIME_MODEL
+    model: process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-realtime-1.5',
     voice: (process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE ?? 'sage') as
       'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse' | 'marin' | 'cedar',
   },

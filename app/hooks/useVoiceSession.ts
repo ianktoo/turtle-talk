@@ -117,6 +117,9 @@ export function useVoiceSession(
           initialMessages:   opts.initialMessages,
           difficultyProfile: opts.difficultyProfile,
           activeMission:     opts.activeMission,
+          ageGroup:          opts.ageGroup,
+          favoriteBook:      opts.favoriteBook,
+          funFacts:          opts.funFacts,
         }).catch(() => {});
       });
     }
@@ -149,6 +152,9 @@ export function useVoiceSession(
       initialMessages:   opts.initialMessages,
       difficultyProfile: opts.difficultyProfile,
       activeMission:     opts.activeMission,
+      ageGroup:          opts.ageGroup,
+      favoriteBook:      opts.favoriteBook,
+      funFacts:          opts.funFacts,
     });
   }, [provider]);
 

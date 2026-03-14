@@ -4,6 +4,7 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAuthStorageKey } from './auth-storage-key';
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -15,8 +16,9 @@ export async function updateSession(request: NextRequest) {
   if (!url || !key) {
     return response;
   }
-
+  const storageKey = getAuthStorageKey();
   const supabase = createServerClient(url, key, {
+    ...(storageKey ? { cookieOptions: { name: storageKey } } : {}),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -47,7 +49,17 @@ export async function updateSession(request: NextRequest) {
   if (isProtected && !user && !isAuthRoute) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
-    return NextResponse.redirect(loginUrl);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    // Clear auth cookies so the next request does not send stale tokens
+    if (storageKey) {
+      const allCookies = request.cookies.getAll();
+      for (const { name } of allCookies) {
+        if (name === storageKey || name.startsWith(`${storageKey}.`)) {
+          redirectResponse.cookies.set(name, '', { maxAge: 0, path: '/' });
+        }
+      }
+    }
+    return redirectResponse;
   }
 
   return response;

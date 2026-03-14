@@ -292,8 +292,15 @@ export default function V2WishListPage() {
           </h1>
 
           {isGuest && (
-            <p style={{ color: 'var(--v2-text-muted)', fontSize: '0.9rem', margin: 0, textAlign: 'center' }}>
-              Log in to see your wish list
+            <p
+              style={{
+                color: 'var(--v2-text-muted)',
+                fontSize: '0.95rem',
+                margin: 0,
+                textAlign: 'center',
+              }}
+            >
+              Ask your parent for login help
             </p>
           )}
 

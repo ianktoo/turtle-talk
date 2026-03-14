@@ -46,6 +46,67 @@ For the **native** pipeline, for Shelly to reply with real conversation (not jus
 
 See [DEBUG.md](DEBUG.md) for the voice pipeline overview, how to enable logs, and an audio-issues checklist.
 
+## Developer release guide
+
+This project uses **Semantic Versioning (SemVer)** and a simple, manual-first
+release flow with optional automation.
+
+- **Source of truth**: `package.json` `version` field.
+- **Changelog**: `CHANGELOG.md` with an `Unreleased` section plus
+  `## [x.y.z] - YYYY-MM-DD` sections grouped by `Added` / `Changed` / `Fixed`
+  (and optional `Notes`).
+- **Narrative notes** (optional): `release-notes.md` for longer context per
+  release.
+
+### Choosing a version
+
+When you're ready to treat the current `main` state as a release:
+
+- **PATCH** (`x.y.Z`): bug fixes and internal refactors that don't change
+  behaviour.
+- **MINOR** (`x.Y.0`): backwards-compatible new features or UX changes.
+- **MAJOR** (`X.0.0`): breaking changes that may require users or scripts to
+  adapt.
+
+When in doubt between PATCH and MINOR, bump MINOR; if there's any chance of
+breaking existing usage, bump MAJOR.
+
+### After you push to `main`
+
+For a significant change set on `main`:
+
+1. **Review changes** since the last tag (`git log`, open PRs, `CHANGELOG.md`
+   `Unreleased` section).
+2. **Pick a version** (`MAJOR.MINOR.PATCH`) based on the rules above.
+3. **Update `package.json`** `version` to the new value.
+4. **Update `CHANGELOG.md`**:
+   - Move bullets from `## [Unreleased]` into a new
+     `## [x.y.z] - YYYY-MM-DD` section.
+   - Group entries under `### Added`, `### Changed`, `### Fixed`, etc.
+   - Add a short `### Notes` subsection with why this release exists and any
+     caveats or migrations.
+5. **(Optional) Add notes to `release-notes.md`** with more narrative detail
+   (motivation, risky areas, validation, follow-ups).
+6. **Commit** the metadata:
+   - `git commit -am "chore(release): x.y.z"`
+7. **Tag the release**:
+   - `git tag vX.Y.Z`
+8. **Push** commit and tag:
+   - `git push`
+   - `git push origin vX.Y.Z`
+
+### GitHub Release automation
+
+When you push a tag of the form `v*` (for example `v0.2.0`), the workflow in
+`.github/workflows/release-on-tag.yml` runs and creates a GitHub Release for
+that tag using:
+
+- `CHANGELOG.md` as the body.
+- GitHub's generated release notes for extra details.
+
+This means your only manual steps are updating versions/changelogs and pushing
+the tag; GitHub will keep the Releases page in sync automatically.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

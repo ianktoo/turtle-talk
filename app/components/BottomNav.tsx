@@ -24,8 +24,7 @@ interface BottomNavProps {
 const LONG_PRESS_MS = 500;
 const ACTIVE_CALL_STATES = new Set(['listening', 'recording', 'processing', 'speaking']);
 
-const HOME_ITEM   = { href: '/',         icon: Home, label: 'Home',       color: '#06b6d4' };
-const GARDEN_ITEM = { href: '/appreciation', icon: Leaf, label: 'Appreciation', color: '#06b6d4' };
+const LEFT_ITEM = { href: '/v2/garden', icon: Leaf, label: 'Garden', color: '#06b6d4' };
 const RIGHT_ITEM  = { href: '/missions', icon: Star, label: 'My Missions', color: '#f97316' };
 
 function NavItem({ href, icon: Icon, label, color, active }: {
@@ -96,7 +95,7 @@ export default function BottomNav({ talkProps }: BottomNavProps = {}) {
 
   const showTalkLabel = talkExpanded || (talkProps?.state === 'idle');
 
-  const leftItem = pathname === '/' ? GARDEN_ITEM : HOME_ITEM;
+  const leftItem = LEFT_ITEM;
 
   const handleTalkPointerDown = () => {
     longPressHandledRef.current = false;

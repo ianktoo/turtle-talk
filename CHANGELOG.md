@@ -1,7 +1,18 @@
 # Changelog
 
 All notable changes to TurtleTalk are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
+Semantic Versioning (`MAJOR.MINOR.PATCH`).
+
+## Format and workflow
+
+- Versions follow SemVer: `MAJOR.MINOR.PATCH`.
+- The `Unreleased` section collects changes merged to `main` since the last tagged release.
+- When cutting a release, move items from `Unreleased` into a new
+  `## [x.y.z] - YYYY-MM-DD` section grouped under `Added`, `Changed`, `Fixed`
+  (and optionally `Removed`, `Security`).
+- Each released version can also have a short `Notes` subsection explaining why the
+  release exists and any caveats or migrations.
 
 ---
 

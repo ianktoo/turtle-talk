@@ -33,54 +33,9 @@ export function useWishList(childId?: string | null, options?: UseWishListOption
       : '/api/wish-list';
     setIsLoading(true);
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7379/ingest/c4e58649-e133-4b9b-91a5-50c962a7060e', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': 'fb5a0a',
-        },
-        body: JSON.stringify({
-          sessionId: 'fb5a0a',
-          runId: 'pre-fix',
-          hypothesisId: 'H1',
-          location: 'app/hooks/useWishList.ts:31',
-          message: 'useWishList.refetch.beforeFetch',
-          data: {
-            url,
-            hasChildId,
-            fetchWhenChildIdNull,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
       const res = await fetch(url, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) {
-        // #region agent log
-        fetch('http://127.0.0.1:7379/ingest/c4e58649-e133-4b9b-91a5-50c962a7060e', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Debug-Session-Id': 'fb5a0a',
-          },
-          body: JSON.stringify({
-            sessionId: 'fb5a0a',
-            runId: 'pre-fix',
-            hypothesisId: 'H2',
-            location: 'app/hooks/useWishList.ts:38',
-            message: 'useWishList.refetch.errorResponse',
-            data: {
-              status: res.status,
-              error: data?.error ?? null,
-              url,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         throw new Error(data.error || 'Failed to load wish list');
       }
       setItems(data.items ?? []);

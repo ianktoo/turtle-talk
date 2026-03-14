@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AdminPageHeader } from '@/app/components/admin/AdminPageHeader';
+import { checkResponseForInvalidSession } from '@/lib/auth-client';
 
 interface SatisfactionStats {
   total: number;
@@ -43,11 +44,13 @@ export default function AdminSatisfactionPage() {
 
   useEffect(() => {
     fetch('/api/admin/satisfaction', { credentials: 'include' })
-      .then((res) => {
+      .then(async (res) => {
+        if (await checkResponseForInvalidSession(res)) return null;
         if (!res.ok) throw new Error(res.status === 403 ? 'Forbidden' : 'Failed to load');
         return res.json();
       })
       .then((data) => {
+        if (data == null) return;
         if (data.error && !data.total && data.total !== 0) {
           setError(data.error);
           setStats(null);

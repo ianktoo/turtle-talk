@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Home, Leaf, Heart, MessageCircle, Mail, Flag } from 'lucide-react';
+import { Home, Leaf, Flag } from 'lucide-react';
 import { useChildSession } from '@/app/hooks/useChildSession';
 import MenuItem from './MenuItem';
+import packageJson from '../../../package.json';
 
 const ITEMS = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/garden', label: 'My Garden', icon: Leaf },
-  { href: '/wish-list', label: 'Wish List', icon: Heart },
-  { href: '/conversation', label: 'Conversation', icon: MessageCircle },
   { href: '/missions', label: 'Missions', icon: Flag },
-  { href: '/messages', label: 'Messages', icon: Mail },
 ] as const;
+
+const APP_URL = 'turtletalk.io';
+const APP_VERSION = packageJson.version;
 
 export interface MenuProps {
   isOpen: boolean;
@@ -34,12 +35,11 @@ export default function Menu({ isOpen, onClose, onOpenLogin }: MenuProps) {
 
   if (!isOpen) return null;
 
-  const avatarName = child?.firstName?.trim() || 'Explorer';
+  const displayName = child?.firstName?.trim() || 'Explorer';
+  const avatarName = displayName;
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
     avatarName,
   )}&size=64&background=00CFB9&color=fff`;
-
-  const displayName = child ? `${child.firstName}` : 'Explorer!';
 
   const handleLoginClick = () => {
     onClose();
@@ -96,16 +96,18 @@ export default function Menu({ isOpen, onClose, onOpenLogin }: MenuProps) {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
-            marginBottom: 8,
+            gap: 12,
+            marginBottom: 10,
           }}
         >
           <div
             style={{
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: 12,
-              padding: '8px 10px',
+              textAlign: 'center',
+              gap: 10,
+              padding: '12px 10px',
               borderRadius: 'var(--v2-radius-card)',
               background: 'var(--v2-glass)',
               border: '1px solid var(--v2-glass-border)',
@@ -113,8 +115,8 @@ export default function Menu({ isOpen, onClose, onOpenLogin }: MenuProps) {
           >
             <div
               style={{
-                width: 56,
-                height: 56,
+                width: 72,
+                height: 72,
                 borderRadius: '50%',
                 overflow: 'hidden',
                 flexShrink: 0,
@@ -132,47 +134,17 @@ export default function Menu({ isOpen, onClose, onOpenLogin }: MenuProps) {
                 }}
               />
             </div>
-            <div>
-              <div
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  color: 'var(--v2-text-primary)',
-                }}
-              >
-                {displayName}
-              </div>
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 500,
-                  color: 'var(--v2-text-muted)',
-                  marginTop: 2,
-                }}
-              >
-                {child ? 'Logged in' : 'Not logged in'}
-              </div>
+            <div
+              style={{
+                fontSize: '1rem',
+                fontWeight: 800,
+                color: 'var(--v2-text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
+              {displayName}
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={child ? handleLogoutClick : handleLoginClick}
-            style={{
-              alignSelf: 'flex-start',
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              color: child ? '#ffffff' : 'var(--v2-primary-dark)',
-              background: child ? 'var(--v2-end-call-red)' : 'rgba(0, 207, 185, 0.12)',
-              boxShadow: 'var(--v2-shadow-card)',
-            }}
-          >
-            {child ? 'Log out' : 'Log in'}
-          </button>
         </div>
 
         {ITEMS.map((item) => (
@@ -184,6 +156,47 @@ export default function Menu({ isOpen, onClose, onOpenLogin }: MenuProps) {
             onClick={onClose}
           />
         ))}
+
+        <div
+          aria-hidden
+          style={{
+            height: 1,
+            background: 'rgba(0,0,0,0.06)',
+            margin: '6px 10px 2px',
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={child ? handleLogoutClick : handleLoginClick}
+          style={{
+            alignSelf: 'center',
+            padding: '6px 14px',
+            borderRadius: '9999px',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            color: child ? '#ffffff' : 'var(--v2-primary-dark)',
+            background: child ? 'var(--v2-end-call-red)' : 'rgba(0, 207, 185, 0.12)',
+            boxShadow: 'var(--v2-shadow-card)',
+            marginTop: 10,
+          }}
+        >
+          {child ? 'Sign out' : 'Log in'}
+        </button>
+
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: 'var(--v2-text-muted)',
+            textAlign: 'center',
+          }}
+        >
+          {APP_URL} · v{APP_VERSION}
+        </div>
       </div>
     </div>
   );

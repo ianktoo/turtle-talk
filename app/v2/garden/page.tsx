@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { X, Package } from 'lucide-react';
+import { X, Package, Heart, MessageCircle, Mail } from 'lucide-react';
 import MenuButton from '@/app/v2/components/MenuButton';
 import ChristmasTreeSVG from '@/app/appreciation/ChristmasTreeSVG';
 import { useChildSession } from '@/app/hooks/useChildSession';
@@ -15,7 +15,7 @@ import { useGardenState } from '@/app/hooks/useGardenState';
 import { useGuestWishes } from '@/app/hooks/useGuestWishes';
 
 type GiftSource = 'parent' | 'mission';
-type GardenModal = 'wish' | 'decoration' | 'missions' | 'talk' | 'treeFull';
+type GardenModal = 'wish' | 'decoration' | 'missions' | 'talk' | 'treeFull' | 'messages';
 
 interface GiftGroup {
   emoji: string;
@@ -292,6 +292,82 @@ export default function V2GardenPage() {
     <>
       <MenuButton />
 
+      <div
+        style={{
+          position: 'fixed',
+          top: 'max(16px, env(safe-area-inset-top))',
+          right: 'max(16px, env(safe-area-inset-right))',
+          zIndex: 50,
+          display: 'flex',
+          gap: 8,
+        }}
+      >
+        <Link
+          href="/v2/wish-list"
+          aria-label="Wish list"
+          style={{
+            width: 'var(--v2-touch-min)',
+            height: 'var(--v2-touch-min)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--v2-radius-card)',
+            background: 'var(--v2-glass)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid var(--v2-glass-border)',
+            boxShadow: 'var(--v2-shadow-card)',
+            color: 'var(--v2-text-primary)',
+            textDecoration: 'none',
+          }}
+        >
+          <Heart size={22} strokeWidth={2} aria-hidden />
+        </Link>
+        <Link
+          href="/v2/conversation"
+          aria-label="Conversation history"
+          style={{
+            width: 'var(--v2-touch-min)',
+            height: 'var(--v2-touch-min)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--v2-radius-card)',
+            background: 'var(--v2-glass)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid var(--v2-glass-border)',
+            boxShadow: 'var(--v2-shadow-card)',
+            color: 'var(--v2-text-primary)',
+            textDecoration: 'none',
+          }}
+        >
+          <MessageCircle size={22} strokeWidth={2} aria-hidden />
+        </Link>
+        <button
+          type="button"
+          onClick={() => setWhichModal('messages')}
+          aria-label="Messages"
+          style={{
+            width: 'var(--v2-touch-min)',
+            height: 'var(--v2-touch-min)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--v2-radius-card)',
+            background: 'var(--v2-glass)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid var(--v2-glass-border)',
+            boxShadow: 'var(--v2-shadow-card)',
+            color: 'var(--v2-text-primary)',
+            cursor: 'pointer',
+          }}
+        >
+          <Mail size={22} strokeWidth={2} aria-hidden />
+        </button>
+      </div>
+
       <main
         style={{
           minHeight: '100vh',
@@ -329,9 +405,6 @@ export default function V2GardenPage() {
           <div
             style={{
               width: '100%',
-              flex: 1,
-              minHeight: '65vh',
-              maxHeight: '65vh',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -346,7 +419,7 @@ export default function V2GardenPage() {
                 aria-label="Open garden"
                 style={{
                   width: '100%',
-                  maxWidth: 360,
+                  maxWidth: 600,
                   aspectRatio: '1',
                   display: 'flex',
                   justifyContent: 'center',
@@ -371,10 +444,13 @@ export default function V2GardenPage() {
             aria-label="Decorate tree"
             style={{
               marginTop: 'auto',
-              width: '100%',
-              maxWidth: 240,
-              padding: '16px 24px',
-              borderRadius: 'var(--v2-radius-card)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              minHeight: 'var(--v2-touch-min)',
+              padding: '12px 24px',
+              borderRadius: 'var(--v2-radius-pill)',
               border: 'none',
               background: 'var(--v2-primary)',
               color: '#ffffff',
@@ -382,10 +458,7 @@ export default function V2GardenPage() {
               fontWeight: 700,
               cursor: 'pointer',
               boxShadow: 'var(--v2-shadow-card)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
+              transition: 'transform var(--v2-transition-fast), box-shadow var(--v2-transition-fast)',
             }}
             onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
             onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -744,6 +817,31 @@ export default function V2GardenPage() {
             <div style={{ padding: '20px', textAlign: 'center' }}>
               <p style={{ margin: 0, color: 'var(--v2-text-secondary)', fontSize: '1rem' }}>
                 You have 15 decorations on your tree. Great job!
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Messages modal */}
+      {whichModal === 'messages' && (
+        <>
+          <div role="presentation" style={modalBackdropStyle} onClick={() => setWhichModal(null)} />
+          <div role="dialog" aria-modal="true" style={modalDialogStyle} onClick={(e) => e.stopPropagation()}>
+            <ModalHeader title="Messages" onClose={() => setWhichModal(null)} />
+            <div
+              style={{
+                padding: '32px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 16,
+                textAlign: 'center',
+              }}
+            >
+              <Mail size={56} strokeWidth={1.5} color="var(--v2-text-muted)" aria-hidden />
+              <p style={{ margin: 0, color: 'var(--v2-text-secondary)', fontSize: '1rem', lineHeight: 1.6, maxWidth: 260 }}>
+                Messages from your grown-up will appear here soon!
               </p>
             </div>
           </div>

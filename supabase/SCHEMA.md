@@ -17,6 +17,7 @@ Current `public` schema as defined by migrations 001–005. Use this to compare 
 | **weekly_reports** | child_id, week_start, payload (jsonb). Unique (child_id, week_start). |
 | **dinner_questions** | parent_id, child_id, question, theme, status (pending/completed), completed_at. |
 | **call_feedback** | "How was your call?" feedback: child_id, rating (happy/neutral/sad null), dismissed_at, call_ended_at, source, time_to_dismiss_ms. |
+| **demo_sessions** | Anonymous demo runs keyed by demo_id; snapshot of child-facing demo data with optional parent/child links for later association. |
 
 ## Indexes (002 + 004 + 008)
 
@@ -33,7 +34,7 @@ Current `public` schema as defined by migrations 001–005. Use this to compare 
 
 ## RLS
 
-- **missions**, **child_memory**: currently permissive `(true)`. Plan: restrict by parent_child when auth is on.
+-- **missions**, **child_memory**: currently permissive `(true)`. Plan: restrict by parent_child when auth is on.
 - **profiles**: select/update own; admin all.
 - **children**: parents see only via parent_child; admin all.
 - **parent_child**: select/insert/delete own or admin.
@@ -42,3 +43,4 @@ Current `public` schema as defined by migrations 001–005. Use this to compare 
 - **support_requests**: user own; admin all.
 - **weekly_reports**, **dinner_questions**: parent for linked children; admin all.
 - **call_feedback**: permissive `(true)` — app inserts without auth; admin reads via API.
+- **demo_sessions**: inserts allowed from demo flows; select is demo-id scoped in the app; updates via admin/service APIs only.

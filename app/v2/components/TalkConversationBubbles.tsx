@@ -11,6 +11,7 @@ export interface TalkConversationBubblesProps {
   pendingUserTranscript?: string | null;
   isThinking?: boolean;
   state?: VoiceSessionState;
+  hideIntroCopy?: boolean;
 }
 
 export default function TalkConversationBubbles({
@@ -18,6 +19,7 @@ export default function TalkConversationBubbles({
   pendingUserTranscript,
   isThinking,
   state,
+  hideIntroCopy,
 }: TalkConversationBubblesProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -46,8 +48,9 @@ export default function TalkConversationBubbles({
   const isListeningEmpty = state === 'listening' && isEmpty;
 
   useEffect(() => {
-    if (!bottomRef.current) return;
-    bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const el = bottomRef.current as unknown as { scrollIntoView?: (opts?: ScrollIntoViewOptions) => void } | null;
+    if (!el || typeof el.scrollIntoView !== 'function') return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [displayItems.length, pending, isThinking]);
 
   return (
@@ -64,68 +67,96 @@ export default function TalkConversationBubbles({
       }}
     >
       {isEmpty ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 12,
-            padding: '16px 0',
-          }}
-        >
-          {(isConnecting || isListeningEmpty) && (
-            <span
-              className={isConnecting ? 'v2-shelly-connecting' : undefined}
-              style={{ fontSize: 36, lineHeight: 1 }}
-              aria-hidden
-            >
-              🐢
-            </span>
-          )}
+        hideIntroCopy ? (
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 6,
-              margin: 0,
+              gap: 10,
+              padding: '16px 0',
             }}
           >
+            <span style={{ fontSize: 30, lineHeight: 1 }} aria-hidden>
+              🐢
+            </span>
             <p
               style={{
                 margin: 0,
-                fontSize: '0.875rem',
+                fontSize: '0.8125rem',
                 fontWeight: 400,
                 color: 'var(--v2-text-muted)',
-                lineHeight: 1.45,
+                lineHeight: 1.4,
                 textAlign: 'center',
               }}
             >
-              {isConnecting
-                ? 'Connecting to Shelly'
-                : isListeningEmpty
-                  ? 'Say hi or ask a question.'
-                  : 'Tap the button below to talk with Shelly.'}
+              Once you start chatting, your conversation with Shelly will appear here.
             </p>
-            {(isListeningEmpty || (!isConnecting && !isListeningEmpty)) && (
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12,
+              padding: '16px 0',
+            }}
+          >
+            {(isConnecting || isListeningEmpty) && (
+              <span
+                className={isConnecting ? 'v2-shelly-connecting' : undefined}
+                style={{ fontSize: 36, lineHeight: 1 }}
+                aria-hidden
+              >
+                🐢
+              </span>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+                margin: 0,
+              }}
+            >
               <p
                 style={{
                   margin: 0,
-                  fontSize: '0.8125rem',
+                  fontSize: '0.875rem',
                   fontWeight: 400,
                   color: 'var(--v2-text-muted)',
-                  lineHeight: 1.4,
+                  lineHeight: 1.45,
                   textAlign: 'center',
-                  opacity: 0.9,
                 }}
               >
-                {isListeningEmpty
-                  ? 'Just talk—Shelly is listening.'
-                  : 'Say hi or ask Shelly a question.'}
+                {isConnecting
+                  ? 'Connecting to Shelly'
+                  : isListeningEmpty
+                    ? 'Say hi or ask a question.'
+                    : 'Tap the button below to talk with Shelly.'}
               </p>
-            )}
+              {(isListeningEmpty || (!isConnecting && !isListeningEmpty)) && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '0.8125rem',
+                    fontWeight: 400,
+                    color: 'var(--v2-text-muted)',
+                    lineHeight: 1.4,
+                    textAlign: 'center',
+                    opacity: 0.9,
+                  }}
+                >
+                  {isListeningEmpty
+                    ? 'Just talk—Shelly is listening.'
+                    : 'Say hi or ask Shelly a question.'}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <>
           {displayItems.map((item, i) => {

@@ -8,8 +8,10 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   try {
     const body = await req.json() as { model?: string; voice?: string };
-    const model = body.model ?? 'gpt-4o-mini-realtime-preview';
-    const voice = body.voice ?? 'sage';
+    const defaultModel = process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-realtime-1.5';
+    const defaultVoice = process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE ?? 'sage';
+    const model = body.model ?? defaultModel;
+    const voice = body.voice ?? defaultVoice;
 
     const res = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',

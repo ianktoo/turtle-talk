@@ -39,6 +39,13 @@ export function useWishRounds(): UseWishRoundsResult {
       const res = await fetch('/api/wishes/rounds', { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) {
+        // Treat missing/expired child session as a soft, guest state instead of an error.
+        // (Message text can vary; the status is the stable signal.)
+        if (res.status === 401) {
+          setRounds([]);
+          setActiveRoundOptions(undefined);
+          return;
+        }
         throw new Error(data.error ?? 'Failed to load rounds');
       }
       setRounds(data.rounds ?? []);

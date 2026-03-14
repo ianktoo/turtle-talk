@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { AdminPageHeader } from '@/app/components/admin/AdminPageHeader';
+import { checkResponseForInvalidSession } from '@/lib/auth-client';
 
 interface WaitingListEntry {
   id: string;
@@ -52,8 +53,14 @@ export default function AdminWaitingListPage() {
 
   useEffect(() => {
     fetch('/api/admin/waiting-list', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((d) => setEntries((d as { entries: WaitingListEntry[] }).entries ?? []))
+      .then(async (res) => {
+        if (await checkResponseForInvalidSession(res)) return null;
+        if (!res.ok) throw new Error('Failed to load');
+        return res.json();
+      })
+      .then((d) => {
+        if (d) setEntries((d as { entries: WaitingListEntry[] }).entries ?? []);
+      })
       .catch(() => setFetchError('Failed to load waiting list'))
       .finally(() => setLoading(false));
   }, []);
@@ -79,6 +86,7 @@ export default function AdminWaitingListPage() {
         credentials: 'include',
         body: JSON.stringify({ status }),
       });
+      if (await checkResponseForInvalidSession(res)) return;
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         setPatchError((d as { error?: string }).error ?? 'Update failed');

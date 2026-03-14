@@ -54,7 +54,7 @@ test('calls OpenAI /v1/realtime/sessions with API key', async () => {
   });
   const req = new NextRequest('http://localhost/api/openai-realtime/session', {
     method: 'POST',
-    body: JSON.stringify({ model: 'gpt-4o-mini-realtime-preview', voice: 'sage' }),
+    body: JSON.stringify({ model: 'gpt-realtime-1.5', voice: 'sage' }),
   });
   await POST(req);
   expect(mockFetch).toHaveBeenCalledWith(
@@ -111,8 +111,10 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   try {
     const body = await req.json() as { model?: string; voice?: string };
-    const model = body.model ?? 'gpt-4o-mini-realtime-preview';
-    const voice = body.voice ?? 'sage';
+    const defaultModel = process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-realtime-1.5';
+    const defaultVoice = process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE ?? 'sage';
+    const model = body.model ?? defaultModel;
+    const voice = body.voice ?? defaultVoice;
 
     const res = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
@@ -172,7 +174,7 @@ voiceProvider: (process.env.NEXT_PUBLIC_VOICE_PROVIDER ?? 'native') as
 
 // Add after the chat block:
 openaiRealtime: {
-  model: process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-4o-mini-realtime-preview',
+  model: process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL ?? 'gpt-realtime-1.5',
   voice: (process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE ?? 'sage') as
     'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse' | 'marin' | 'cedar',
 },
@@ -254,7 +256,7 @@ import type { Message, TurtleMood, MissionSuggestion } from '../types';
 import type { VoiceSessionOptions } from './types';
 import { BaseVoiceProvider } from './base';
 
-const DEFAULT_MODEL = 'gpt-4o-mini-realtime-preview';
+const DEFAULT_MODEL = 'gpt-realtime-1.5';
 const DEFAULT_VOICE = 'sage';
 const SDP_ENDPOINT = 'https://api.openai.com/v1/realtime';
 
@@ -811,7 +813,7 @@ beforeEach(() => {
       text: async () => 'answer-sdp',
     });
 
-  process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL = 'gpt-4o-mini-realtime-preview';
+  process.env.NEXT_PUBLIC_OPENAI_REALTIME_MODEL = 'gpt-realtime-1.5';
   process.env.NEXT_PUBLIC_OPENAI_REALTIME_VOICE = 'sage';
 });
 
@@ -1180,7 +1182,7 @@ Add to `.env.local`:
 ```
 OPENAI_API_KEY=sk-...          # already present — used server-side only
 NEXT_PUBLIC_VOICE_PROVIDER=openai-realtime
-NEXT_PUBLIC_OPENAI_REALTIME_MODEL=gpt-4o-mini-realtime-preview   # or gpt-4o-realtime-preview
+NEXT_PUBLIC_OPENAI_REALTIME_MODEL=gpt-realtime-1.5
 NEXT_PUBLIC_OPENAI_REALTIME_VOICE=sage
 ```
 

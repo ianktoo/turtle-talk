@@ -9,6 +9,7 @@ export interface TalkConversationCardProps {
   pendingUserTranscript?: string | null;
   isThinking?: boolean;
   state?: VoiceSessionState;
+  hideIntroCopy?: boolean;
 }
 
 export default function TalkConversationCard({
@@ -16,6 +17,7 @@ export default function TalkConversationCard({
   pendingUserTranscript,
   isThinking,
   state,
+  hideIntroCopy,
 }: TalkConversationCardProps) {
   return (
     <div
@@ -36,6 +38,7 @@ export default function TalkConversationCard({
         pendingUserTranscript={pendingUserTranscript}
         isThinking={isThinking}
         state={state}
+        hideIntroCopy={hideIntroCopy}
       />
     </div>
   );
