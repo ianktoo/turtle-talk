@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Html5Qrcode } from 'html5-qrcode';
 import booksData from '@/app/placeholders/books.json';
 import moviesData from '@/app/placeholders/movies.json';
+import { useWakeLock } from '@/app/hooks/useWakeLock';
 
 type ParentPreference = 'books' | 'movies' | 'garden' | 'dinner';
 
@@ -951,6 +952,7 @@ export default function DemoParentPage() {
 }
 
 function DemoParentPageInner() {
+  useWakeLock();
   const searchParams = useSearchParams();
   const router = useRouter();
 

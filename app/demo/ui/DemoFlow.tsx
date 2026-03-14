@@ -5,6 +5,7 @@ import { createVoiceProvider } from '@/lib/speech/voice';
 import { useVoiceSession } from '@/app/hooks/useVoiceSession';
 import { usePersonalMemory } from '@/app/hooks/usePersonalMemory';
 import { useMissions } from '@/app/hooks/useMissions';
+import { useWakeLock } from '@/app/hooks/useWakeLock';
 import { getDeviceId, getGuestDb } from '@/lib/db';
 import type { Message, MissionSuggestion } from '@/lib/speech/types';
 import books from '@/app/placeholders/books.json';
@@ -22,7 +23,14 @@ import {
   type DemoStep,
 } from '../demoSession';
 import { getDemoSkippedSteps } from '@/lib/env/demo';
-import { getTattleCards } from '@/lib/tattle-cards/tattle-cards';
+import {
+  getTattleCards,
+  fetchTattleCards,
+  fetchCardDisplaySettings,
+  DEFAULT_DISPLAY_SETTINGS,
+  type TattleCard,
+  type CardDisplaySettings,
+} from '@/lib/tattle-cards/tattle-cards';
 import TalkConversationCard from '@/app/v2/components/TalkConversationCard';
 import TalkEndCallButton from '@/app/v2/components/TalkEndCallButton';
 import TalkMuteToggle from '@/app/v2/components/TalkMuteToggle';
@@ -311,6 +319,93 @@ function StepNavigation(props: {
 /* ------------------------------------------------------------------ */
 /*  Modals                                                             */
 /* ------------------------------------------------------------------ */
+
+function ConsentModal(props: { open: boolean; onAgree: () => void; onDecline: () => void }) {
+  if (!props.open) return null;
+  return (
+    <ModalBackdrop onClose={props.onDecline}>
+      <div style={{ padding: 20, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 750,
+            letterSpacing: 0.2,
+            color: '#0E1020',
+          }}
+        >
+          Before We Start
+        </h2>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: '#64748b' }}>
+          A parent or guardian should review this
+        </p>
+      </div>
+      <div
+        style={{
+          padding: 20,
+          display: 'grid',
+          gap: 12,
+          fontSize: 14,
+          color: '#384165',
+          overflowY: 'auto',
+        }}
+      >
+        <p style={{ margin: 0 }}>
+          TurtleTalk collects a small amount of information during this demo so Shelly can have a
+          personalized conversation with your child:
+        </p>
+        <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+          <li><strong>First name</strong> and <strong>age range</strong></li>
+          <li><strong>Favorite book</strong> and <strong>fun facts</strong></li>
+          <li><strong>Voice conversation</strong> (processed in real time, not stored as audio)</li>
+        </ul>
+        <p style={{ margin: 0 }}>
+          This data is used only for the demo experience. We do not sell personal information or use it
+          for advertising. Voice audio is not recorded or retained after the conversation.
+        </p>
+        <p style={{ margin: 0, fontSize: 13 }}>
+          Read our full{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#6366f1', textDecoration: 'underline' }}
+          >
+            Privacy Policy
+          </a>{' '}
+          for details on data handling, retention, and your California privacy rights.
+        </p>
+      </div>
+      <div
+        style={{
+          padding: 16,
+          borderTop: '1px solid rgba(0,0,0,0.08)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <button
+          onClick={props.onDecline}
+          style={{
+            appearance: 'none',
+            border: 'none',
+            background: 'none',
+            color: '#64748b',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '8px 4px',
+          }}
+        >
+          No thanks
+        </button>
+        <PrimaryButton onClick={props.onAgree}>I Agree</PrimaryButton>
+      </div>
+    </ModalBackdrop>
+  );
+}
 
 function OnboardingModal(props: { open: boolean; onClose: () => void }) {
   if (!props.open) return null;
@@ -892,8 +987,20 @@ function TattleCardPicker(props: {
   onSelect: (id: string) => void;
 }) {
   const [revealAll, setRevealAll] = useState(false);
+  const [cards, setCards] = useState<readonly TattleCard[]>(getTattleCards);
+  const [displaySettings, setDisplaySettings] = useState<CardDisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
 
-  const cards = getTattleCards();
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchTattleCards(), fetchCardDisplaySettings()]).then(
+      ([fetchedCards, settings]) => {
+        if (cancelled) return;
+        if (fetchedCards.length > 0) setCards(fetchedCards);
+        setDisplaySettings(settings);
+      },
+    );
+    return () => { cancelled = true; };
+  }, []);
 
   const rotationByIndex: number[] = [-4, 2, -1, 3, -3, 1];
 
@@ -943,41 +1050,103 @@ function TattleCardPicker(props: {
             const baseRotation = rotationByIndex[index % rotationByIndex.length] || 0;
 
             return (
-              <button
+              <div
                 key={card.id}
-                type="button"
-                onClick={() => props.onSelect(card.id)}
                 style={{
+                  perspective: 800,
                   width: '100%',
                   maxWidth: 120,
-                  aspectRatio: '3 / 4',
-                  textAlign: 'center',
-                  padding: '10px 10px',
-                  borderRadius: 18,
-                  border: isSelected
-                    ? '2px solid rgba(140,120,255,0.95)'
-                    : '1px solid rgba(255,255,255,0.18)',
-                  background: isFaceUp
-                    ? 'linear-gradient(145deg, rgba(60,80,180,0.9), rgba(150,110,255,0.9))'
-                    : 'radial-gradient(circle at 20% 0%, rgba(255,255,255,0.16), rgba(40,40,70,0.95))',
-                  boxShadow: isSelected
-                    ? '0 8px 22px rgba(0,0,0,0.45)'
-                    : '0 4px 14px rgba(0,0,0,0.35)',
-                  cursor: 'pointer',
-                  display: 'grid',
-                  gap: 4,
-                  alignItems: 'center',
-                  justifyItems: 'center',
-                  transform: `rotate(${isSelected ? baseRotation * 0.5 : baseRotation}deg) scale(${
-                    isSelected ? 1.05 : 1
-                  })`,
-                  transition:
-                    'transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out, background 160ms ease-out',
-                  overflow: 'hidden',
                 }}
               >
-                {isFaceUp ? (
-                  <>
+                <button
+                  type="button"
+                  onClick={() => props.onSelect(card.id)}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '3 / 4',
+                    position: 'relative',
+                    transformStyle: 'preserve-3d',
+                    transform: `rotate(${isSelected ? baseRotation * 0.5 : baseRotation}deg) scale(${
+                      isSelected ? 1.05 : 1
+                    }) rotateY(${isFaceUp ? 180 : 0}deg)`,
+                    transition: 'transform 0.5s ease',
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    outline: 'none',
+                  }}
+                >
+                  {/* Back face — TurtleTalk logo */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backfaceVisibility: 'hidden',
+                      borderRadius: 18,
+                      border: isSelected
+                        ? '2px solid rgba(140,120,255,0.95)'
+                        : '1px solid rgba(255,255,255,0.18)',
+                      background:
+                        'radial-gradient(circle at 30% 20%, rgba(40,55,120,0.95), rgba(20,20,50,0.98))',
+                      boxShadow: isSelected
+                        ? '0 8px 22px rgba(0,0,0,0.45)'
+                        : '0 4px 14px rgba(0,0,0,0.35)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <img
+                      src="/TurtleTalk---Logo.png"
+                      alt="TurtleTalk"
+                      style={{
+                        width: '70%',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        borderRadius: 8,
+                        opacity: 0.9,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'rgba(220,225,255,0.8)',
+                        fontWeight: 650,
+                      }}
+                    >
+                      Tap to reveal
+                    </div>
+                  </div>
+                  {/* Front face — card content (pre-rotated 180deg so it reads correctly when flipped) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backfaceVisibility: 'hidden',
+                      transform: 'rotateY(180deg)',
+                      borderRadius: 18,
+                      border: isSelected
+                        ? '2px solid rgba(140,120,255,0.95)'
+                        : '1px solid rgba(255,255,255,0.18)',
+                      background:
+                        'linear-gradient(145deg, rgba(60,80,180,0.9), rgba(150,110,255,0.9))',
+                      boxShadow: isSelected
+                        ? '0 8px 22px rgba(0,0,0,0.45)'
+                        : '0 4px 14px rgba(0,0,0,0.35)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      padding: '10px 8px',
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                    }}
+                  >
                     <div style={{ fontSize: 22, lineHeight: 1 }}>{card.emoji}</div>
                     <div
                       style={{
@@ -997,22 +1166,54 @@ function TattleCardPicker(props: {
                     >
                       {card.description}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 22, lineHeight: 1 }}>{card.emoji}</div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: 'rgba(220,225,255,0.9)',
-                        fontWeight: 650,
-                      }}
-                    >
-                      Secret card
-                    </div>
-                  </>
-                )}
-              </button>
+                    {displaySettings.showSkill && card.skill && (
+                      <div
+                        style={{
+                          fontSize: 9,
+                          color: 'rgba(200,210,255,0.85)',
+                          fontWeight: 600,
+                          marginTop: 2,
+                          padding: '2px 6px',
+                          background: 'rgba(255,255,255,0.12)',
+                          borderRadius: 6,
+                        }}
+                      >
+                        {card.skill}
+                      </div>
+                    )}
+                    {displaySettings.showScenario && card.scenario && (
+                      <div
+                        style={{
+                          fontSize: 9,
+                          color: 'rgba(220,225,255,0.7)',
+                          fontStyle: 'italic',
+                          lineHeight: 1.3,
+                          marginTop: 1,
+                        }}
+                      >
+                        {card.scenario}
+                      </div>
+                    )}
+                    {displaySettings.showCategory && card.category && (
+                      <div
+                        style={{
+                          fontSize: 8,
+                          color: 'rgba(180,190,255,0.9)',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.5,
+                          marginTop: 2,
+                          padding: '1px 5px',
+                          background: 'rgba(255,255,255,0.1)',
+                          borderRadius: 4,
+                        }}
+                      >
+                        {card.category}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -1625,6 +1826,7 @@ function DemoParentDashboard(props: {
 /* ------------------------------------------------------------------ */
 
 export default function DemoFlow() {
+  useWakeLock();
   const { status, requestPermission } = useMicPermission();
 
   const [session, setSession] = useState<DemoSession>(() => {
@@ -1636,6 +1838,7 @@ export default function DemoFlow() {
   });
   const step: DemoStep = session.step;
 
+  const [showConsent, setShowConsent] = useState<boolean>(() => !session.hasConsented);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !session.hasSeenOnboarding);
   const [showSettings, setShowSettings] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -1735,9 +1938,10 @@ export default function DemoFlow() {
         ageGroup: session.ageGroup ?? null,
         favoriteBook: session.favoriteBook ?? '',
         funFacts: session.funFacts ?? [],
+        consentedAt: session.consentedAt ?? null,
       }),
     }).catch(() => {});
-  }, [childName, session.ageGroup, session.demoId, session.favoriteBook, session.funFacts]);
+  }, [childName, session.ageGroup, session.consentedAt, session.demoId, session.favoriteBook, session.funFacts]);
 
   useEffect(() => {
     if (step !== 'survey' || !session.demoId) return;
@@ -1751,6 +1955,7 @@ export default function DemoFlow() {
       wishChoice: session.wishChoice ?? null,
       topics,
       messagesSummary: (voice.messages ?? []).slice(-6),
+      consentedAt: session.consentedAt ?? null,
     };
     void fetch('/api/demo/session', {
       method: 'POST',
@@ -1891,8 +2096,18 @@ export default function DemoFlow() {
 
   return (
     <DemoShell onResetAll={() => setConfirmResetOpen(true)} theme={session.demoTheme ?? 'dark'}>
+      <ConsentModal
+        open={showConsent}
+        onAgree={() => {
+          setShowConsent(false);
+          updateSession({ hasConsented: true, consentedAt: new Date().toISOString() });
+        }}
+        onDecline={() => {
+          window.location.href = '/';
+        }}
+      />
       <OnboardingModal
-        open={showOnboarding && step === 'tattleCard' && status === 'granted'}
+        open={!showConsent && showOnboarding && step === 'tattleCard' && status === 'granted'}
         onClose={() => {
           setShowOnboarding(false);
           updateSession({ hasSeenOnboarding: true });

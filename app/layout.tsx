@@ -30,6 +30,11 @@ export const metadata: Metadata = {
   applicationName: 'TurtleTalk',
   category: 'education',
 
+  icons: {
+    icon: '/TurtleTalk---Logo.png',
+    apple: '/TurtleTalk---Logo.png',
+  },
+
   openGraph: {
     type: 'website',
     url: APP_URL,

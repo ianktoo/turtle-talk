@@ -125,6 +125,15 @@ export interface DemoSession {
    * How the child wants to make their wish in the demo.
    */
   wishChoice?: 'solo' | 'withParent' | 'withFriend' | null;
+  /**
+   * Whether the parent/guardian has acknowledged the privacy notice and
+   * consented to data collection for this demo session.
+   */
+  hasConsented?: boolean;
+  /**
+   * ISO timestamp of when consent was given.
+   */
+  consentedAt?: string;
 }
 
 const STORAGE_KEY = 'turtle-talk-demo-session-v1';
@@ -153,6 +162,8 @@ export function createFreshDemoSession(): DemoSession {
     favoriteBook: '',
     funFacts: [],
     wishChoice: null,
+    hasConsented: false,
+    consentedAt: undefined,
   };
 }
 

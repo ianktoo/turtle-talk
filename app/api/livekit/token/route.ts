@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken, RoomConfiguration, RoomAgentDispatch } from 'livekit-server-sdk';
+import { getSupabaseAdmin } from '@/lib/supabase/server-admin';
 
 /**
  * POST /api/livekit/token
@@ -36,7 +37,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const ageGroup = typeof body.ageGroup === 'string' && body.ageGroup.trim() ? body.ageGroup.trim() : null;
     const favoriteBook = typeof body.favoriteBook === 'string' && body.favoriteBook.trim() ? body.favoriteBook.trim() : null;
     const funFacts = Array.isArray(body.funFacts) ? (body.funFacts as string[]).filter((f): f is string => typeof f === 'string') : [];
-    const meta: Record<string, unknown> = { childName: childName ?? null, topics };
+    let allowInterruptions = false;
+    try {
+      const admin = getSupabaseAdmin();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: settings } = await (admin as any)
+        .from('session_settings')
+        .select('allow_interruptions')
+        .eq('id', 'default')
+        .single();
+      if (settings?.allow_interruptions === true) allowInterruptions = true;
+    } catch {
+      // fall back to default (false) if the table doesn't exist yet
+    }
+
+    const meta: Record<string, unknown> = { childName: childName ?? null, topics, allowInterruptions };
     if (ageGroup) meta.ageGroup = ageGroup;
     if (favoriteBook) meta.favoriteBook = favoriteBook;
     if (funFacts.length > 0) meta.funFacts = funFacts;

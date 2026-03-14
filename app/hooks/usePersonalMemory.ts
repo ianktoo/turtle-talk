@@ -31,10 +31,11 @@ export function usePersonalMemory(childId?: string) {
 
   const saveChildName = useCallback(
     (name: string) => {
+      setChildName(name);
       const trimmed = name.trim();
-      if (!trimmed) return;
-      setChildName(trimmed);
-      void db.saveChildName(id, trimmed).catch(() => {/* ignore */});
+      if (trimmed) {
+        void db.saveChildName(id, trimmed).catch(() => {/* ignore */});
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [id],
