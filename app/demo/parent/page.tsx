@@ -696,6 +696,129 @@ function MissionProgress({ session }: { session: DemoSessionSummary }) {
 }
 
 // ---------------------------------------------------------------------------
+// Parent Feedback
+// ---------------------------------------------------------------------------
+
+function ParentFeedback({
+  feedback,
+  setFeedback,
+  wantsFullVersion,
+  setWantsFullVersion,
+  saved,
+  onSubmit,
+}: {
+  feedback: string;
+  setFeedback: (v: string) => void;
+  wantsFullVersion: boolean | null;
+  setWantsFullVersion: (v: boolean | null) => void;
+  saved: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="pd-card" style={{ padding: 20 }}>
+      <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 700, color: 'var(--pd-text-primary)' }}>
+        Your feedback
+      </h3>
+      <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--pd-text-tertiary)', lineHeight: 1.5 }}>
+        Help us make Turtle Talk better for your family.
+      </p>
+
+      <div style={{ display: 'grid', gap: 14 }}>
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--pd-text-secondary)', marginBottom: 6, fontWeight: 600 }}>
+            What should we improve?
+          </div>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Share your thoughts..."
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 12,
+              border: '1px solid var(--pd-card-border)',
+              background: 'var(--pd-input-bg)',
+              color: 'var(--pd-text-primary)',
+              fontSize: 14,
+              outline: 'none',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--pd-text-secondary)', marginBottom: 6, fontWeight: 600 }}>
+            Try the full version when it{"'"}s ready?
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {([
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' },
+              { value: null, label: 'Not sure' },
+            ] as const).map((opt) => (
+              <button
+                key={String(opt.value)}
+                onClick={() => setWantsFullVersion(opt.value)}
+                style={{
+                  appearance: 'none',
+                  cursor: 'pointer',
+                  padding: '8px 16px',
+                  borderRadius: 10,
+                  border: wantsFullVersion === opt.value
+                    ? '1.5px solid var(--pd-accent)'
+                    : '1px solid var(--pd-card-border)',
+                  background: wantsFullVersion === opt.value ? 'var(--pd-accent-soft)' : 'transparent',
+                  color: wantsFullVersion === opt.value ? 'var(--pd-accent)' : 'var(--pd-text-secondary)',
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {saved ? (
+          <div
+            style={{
+              fontSize: 13,
+              color: 'var(--pd-success, #22c55e)',
+              background: 'var(--pd-success-soft, rgba(34,197,94,0.08))',
+              border: '1px solid var(--pd-success-border, rgba(34,197,94,0.2))',
+              borderRadius: 10,
+              padding: '10px 12px',
+            }}
+          >
+            Thanks for your feedback!
+          </div>
+        ) : (
+          <button
+            onClick={onSubmit}
+            style={{
+              appearance: 'none',
+              border: 'none',
+              background: 'var(--pd-accent)',
+              color: '#fff',
+              padding: '11px 20px',
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+              justifySelf: 'start',
+            }}
+          >
+            Submit feedback
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Conversion CTA
 // ---------------------------------------------------------------------------
 
@@ -832,6 +955,9 @@ export default function DemoParentPage() {
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistMessage, setWaitlistMessage] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [parentFeedback, setParentFeedback] = useState('');
+  const [parentWantsFullVersion, setParentWantsFullVersion] = useState<boolean | null>(null);
+  const [feedbackSaved, setFeedbackSaved] = useState(false);
 
   // ---- load session ----
   const loadSession = useCallback(
@@ -907,7 +1033,7 @@ export default function DemoParentPage() {
       const res = await fetch('/api/waiting-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, demoId: session?.demoId ?? null }),
       });
       const data = (await res.json()) as { ok?: boolean; message?: string; error?: string };
       if (!res.ok || data.error) {
@@ -919,6 +1045,25 @@ export default function DemoParentPage() {
       );
     } catch {
       setWaitlistError('Could not add you to the waitlist.');
+    }
+  };
+
+  // ---- submit parent feedback ----
+  const handleSubmitFeedback = async () => {
+    if (!session) return;
+    try {
+      await fetch('/api/demo/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          demoId: session.demoId,
+          parentFeedback: parentFeedback.trim() || null,
+          parentWantsFullVersion: parentWantsFullVersion,
+        }),
+      });
+      setFeedbackSaved(true);
+    } catch {
+      /* silent */
     }
   };
 
@@ -937,6 +1082,9 @@ export default function DemoParentPage() {
     setWaitlistError(null);
     setWaitlistMessage(null);
     setSessionIdInput('');
+    setParentFeedback('');
+    setParentWantsFullVersion(null);
+    setFeedbackSaved(false);
     router.replace('/demo/parent');
   };
 
@@ -1213,6 +1361,16 @@ export default function DemoParentPage() {
                 </div>
               </div>
             )}
+
+            {/* Parent Feedback */}
+            <ParentFeedback
+              feedback={parentFeedback}
+              setFeedback={setParentFeedback}
+              wantsFullVersion={parentWantsFullVersion}
+              setWantsFullVersion={setParentWantsFullVersion}
+              saved={feedbackSaved}
+              onSubmit={handleSubmitFeedback}
+            />
 
             {/* Conversion CTA */}
             <ConversionCTA

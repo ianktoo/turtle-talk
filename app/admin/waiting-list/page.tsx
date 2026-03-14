@@ -4,6 +4,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { AdminPageHeader } from '@/app/components/admin/AdminPageHeader';
 import { checkResponseForInvalidSession } from '@/lib/auth-client';
 
+interface DemoData {
+  demo_id: string;
+  child_name: string | null;
+  age_group: string | null;
+  completed_missions_count: number | null;
+  wish_choice: string | null;
+  topics: string[] | null;
+}
+
 interface WaitingListEntry {
   id: string;
   email: string;
@@ -11,6 +20,10 @@ interface WaitingListEntry {
   created_at: string;
   invited_at: string | null;
   approved_at: string | null;
+  demo_id: string | null;
+  converted_user_id: string | null;
+  converted_at: string | null;
+  demo: DemoData | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
@@ -38,9 +51,42 @@ function WLBadge({ status }: { status: string }) {
   );
 }
 
+function ConvertedBadge() {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 9px', borderRadius: 20,
+      fontSize: 12, fontWeight: 500,
+      color: '#7c3aed', background: 'rgba(124,58,237,0.1)',
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', flexShrink: 0 }} />
+      Converted
+    </span>
+  );
+}
+
 function formatDate(iso: string | null) {
-  if (!iso) return '—';
+  if (!iso) return '\u2014';
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function DemoCell({ demo }: { demo: DemoData | null }) {
+  if (!demo) {
+    return <span style={{ color: 'var(--pd-text-tertiary)', fontSize: 12 }}>{'\u2014'}</span>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, lineHeight: 1.4 }}>
+      {demo.child_name && (
+        <span style={{ fontWeight: 600, color: 'var(--pd-text-primary)' }}>{demo.child_name}</span>
+      )}
+      <span style={{ color: 'var(--pd-text-tertiary)' }}>
+        {[
+          demo.age_group,
+          demo.completed_missions_count != null ? `${demo.completed_missions_count} mission${demo.completed_missions_count !== 1 ? 's' : ''}` : null,
+        ].filter(Boolean).join(' \u00B7 ') || 'Session started'}
+      </span>
+    </div>
+  );
 }
 
 export default function AdminWaitingListPage() {
@@ -50,6 +96,8 @@ export default function AdminWaitingListPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [patching, setPatching] = useState<string | null>(null);
   const [patchError, setPatchError] = useState<string | null>(null);
+  const [converting, setConverting] = useState<string | null>(null);
+  const [convertError, setConvertError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/waiting-list', { credentials: 'include' })
@@ -112,18 +160,53 @@ export default function AdminWaitingListPage() {
     }
   }
 
+  async function convertToAccount(id: string) {
+    setConverting(id);
+    setConvertError(null);
+    try {
+      const res = await fetch(`/api/admin/waiting-list/${id}/convert`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (await checkResponseForInvalidSession(res)) return;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setConvertError((data as { error?: string }).error ?? 'Conversion failed');
+        return;
+      }
+      const result = data as { userId?: string; childId?: string };
+      const now = new Date().toISOString();
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? {
+                ...e,
+                converted_user_id: result.userId ?? null,
+                converted_at: now,
+                status: 'approved',
+                approved_at: now,
+              }
+            : e
+        )
+      );
+    } catch {
+      setConvertError('Network error');
+    } finally {
+      setConverting(null);
+    }
+  }
+
   function RowActions({ entry }: { entry: WaitingListEntry }) {
-    const busy = patching === entry.id;
+    const busy = patching === entry.id || converting === entry.id;
     const { status } = entry;
     const isPending = status === 'pending';
     const isInvited = status === 'invited';
     const isRejected = status === 'rejected';
-
-    if (!isPending && !isInvited && !isRejected) return null;
+    const isConverted = !!entry.converted_user_id;
 
     return (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {(isPending || isInvited) && (
+        {!isConverted && (isPending || isInvited) && (
           <button
             onClick={() => updateStatus(entry.id, 'approved')}
             disabled={busy}
@@ -136,7 +219,7 @@ export default function AdminWaitingListPage() {
             Approve
           </button>
         )}
-        {isPending && (
+        {!isConverted && isPending && (
           <button
             onClick={() => updateStatus(entry.id, 'invited')}
             disabled={busy}
@@ -149,7 +232,7 @@ export default function AdminWaitingListPage() {
             Invite
           </button>
         )}
-        {(isPending || isInvited) && (
+        {!isConverted && (isPending || isInvited) && (
           <button
             onClick={() => updateStatus(entry.id, 'rejected')}
             disabled={busy}
@@ -162,7 +245,7 @@ export default function AdminWaitingListPage() {
             Reject
           </button>
         )}
-        {isRejected && (
+        {!isConverted && isRejected && (
           <button
             onClick={() => updateStatus(entry.id, 'approved')}
             disabled={busy}
@@ -175,6 +258,20 @@ export default function AdminWaitingListPage() {
             Approve
           </button>
         )}
+        {!isConverted && (
+          <button
+            onClick={() => convertToAccount(entry.id)}
+            disabled={busy}
+            style={{
+              padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              border: '1px solid rgba(124,58,237,0.35)', background: 'rgba(124,58,237,0.08)', color: '#7c3aed',
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            {converting === entry.id ? 'Converting\u2026' : 'Convert to Account'}
+          </button>
+        )}
+        {isConverted && <ConvertedBadge />}
       </div>
     );
   }
@@ -193,7 +290,7 @@ export default function AdminWaitingListPage() {
     <>
       <AdminPageHeader title="Waiting List" parentHref="/admin" right={pendingBadge} />
 
-      <main style={{ maxWidth: 960, margin: '0 auto', padding: '24px 20px 60px' }}>
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px 60px' }}>
         {/* Filter pills */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
           {FILTERS.map((f) => {
@@ -217,13 +314,13 @@ export default function AdminWaitingListPage() {
           })}
         </div>
 
-        {patchError && (
+        {(patchError || convertError) && (
           <div style={{
             marginBottom: 12, fontSize: 13, color: 'var(--pd-error)',
             padding: '9px 14px', background: 'rgba(220,38,38,0.08)',
             borderRadius: 10, border: '1px solid rgba(220,38,38,0.2)',
           }}>
-            {patchError}
+            {patchError || convertError}
           </div>
         )}
 
@@ -244,10 +341,10 @@ export default function AdminWaitingListPage() {
 
           {!loading && !fetchError && (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 540 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--pd-card-border)' }}>
-                    {['Email', 'Status', 'Joined', 'Invited', 'Actions'].map((h) => (
+                    {['Email', 'Status', 'Demo', 'Joined', 'Invited', 'Actions'].map((h) => (
                       <th
                         key={h}
                         style={{
@@ -265,7 +362,7 @@ export default function AdminWaitingListPage() {
                   {filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         style={{ padding: 40, textAlign: 'center', color: 'var(--pd-text-tertiary)', fontSize: 14 }}
                       >
                         No entries
@@ -288,6 +385,9 @@ export default function AdminWaitingListPage() {
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <WLBadge status={e.status} />
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <DemoCell demo={e.demo} />
                       </td>
                       <td style={{
                         padding: '12px 16px', fontSize: 12,

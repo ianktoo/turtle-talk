@@ -11,12 +11,14 @@ type DemoSessionPayload = {
   wishChoice?: 'solo' | 'withParent' | 'withFriend' | null;
   topics?: string[];
   messagesSummary?: unknown;
+  parentFeedback?: string | null;
+  parentWantsFullVersion?: boolean | null;
 };
 
 /**
  * POST /api/demo/session
  * Upserts a demo session record keyed by demoId.
- * Called from the demo flow on the child side so the parent view can fetch it later.
+ * Called from both the child demo flow and the parent demo experience.
  */
 export async function POST(request: NextRequest) {
   let body: DemoSessionPayload;
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   const now = new Date().toISOString();
 
-  const record = {
+  const record: Record<string, unknown> = {
     demo_id: demoId,
     child_name: body.childName ?? null,
     age_group: body.ageGroup ?? null,
@@ -50,6 +52,13 @@ export async function POST(request: NextRequest) {
     messages_summary: body.messagesSummary ?? null,
     last_seen_at: now,
   };
+
+  if ('parentFeedback' in body) {
+    record.parent_feedback = body.parentFeedback ?? null;
+  }
+  if ('parentWantsFullVersion' in body) {
+    record.parent_wants_full_version = body.parentWantsFullVersion ?? null;
+  }
 
   const { data, error } = await admin
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

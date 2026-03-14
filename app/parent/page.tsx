@@ -72,6 +72,7 @@ export default function ParentPage() {
   const [notifications, setNotifications] = useState<ParentNotification[]>([]);
   const [wishRound, setWishRound] = useState<WishRound | null>(null);
   const [honorLoading, setHonorLoading] = useState(false);
+  const [missionsRequiredInput, setMissionsRequiredInput] = useState(3);
 
   const { items: wishListItems, isLoading: wishListLoading, refetch: refetchWishList } = useWishList(activeChild?.id ?? null);
   const { addItem: addWishItem, deleteItem: deleteWishItem } = useWishListMutations(activeChild?.id, refetchWishList);
@@ -306,7 +307,8 @@ export default function ParentPage() {
                     <span style={{ fontSize: 15, color: 'var(--pd-text-primary)' }}>
                       {n.type === 'growth_moment' && `${(n.payload?.childName as string) ?? 'Your child'} had a growth moment! Pick 3 wishes with them in the Garden.`}
                       {n.type === 'child_picked_wishes' && `${(n.payload?.childName as string) ?? 'Your child'} picked 3 wishes. Choose one to honor below.`}
-                      {!['growth_moment', 'child_picked_wishes'].includes(n.type) && ((n.payload?.text as string) ?? n.type)}
+                      {n.type === 'wish_missions_complete' && `${(n.payload?.childName as string) ?? 'Your child'} completed all missions and is ready for their wish to come true!`}
+                      {!['growth_moment', 'child_picked_wishes', 'wish_missions_complete'].includes(n.type) && ((n.payload?.text as string) ?? n.type)}
                     </span>
                     {!n.readAt && (
                       <button
@@ -344,8 +346,31 @@ export default function ParentPage() {
                 Choose one wish to honor
               </h2>
               <p style={{ fontSize: 15, color: 'var(--pd-text-secondary)', margin: '0 0 14px' }}>
-                {activeChild?.name} picked these 3 wishes. Choose one to make come true — they&apos;ll get a decoration on their tree!
+                {activeChild?.name} picked these 3 wishes. Choose one to make come true — they&apos;ll need to complete missions first!
               </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <label htmlFor="missions-required-input" style={{ fontSize: 14, fontWeight: 500, color: 'var(--pd-text-secondary)' }}>
+                  Missions required:
+                </label>
+                <input
+                  id="missions-required-input"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={missionsRequiredInput}
+                  onChange={(e) => setMissionsRequiredInput(Math.max(1, Math.min(20, Number(e.target.value) || 3)))}
+                  style={{
+                    width: 60,
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: '1px solid var(--pd-card-border)',
+                    fontSize: 15,
+                    background: 'var(--pd-input-bg)',
+                    color: 'var(--pd-text-primary)',
+                    textAlign: 'center',
+                  }}
+                />
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {wishRound.selectedOptions.map((opt) => (
                   <button
@@ -359,7 +384,7 @@ export default function ParentPage() {
                           method: 'PATCH',
                           headers: { 'Content-Type': 'application/json' },
                           credentials: 'include',
-                          body: JSON.stringify({ optionId: opt.id }),
+                          body: JSON.stringify({ optionId: opt.id, missionsRequired: missionsRequiredInput }),
                         });
                         if (res.ok) {
                           fetchWishRound();

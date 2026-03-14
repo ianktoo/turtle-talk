@@ -28,7 +28,7 @@ export type DemoStep =
  * - **missionsPick** — Shelly suggests 2-3 brave missions; child picks one, skips, or talks more.
  * - **missionDo** — Child marks the chosen mission complete or dismisses it.
  * - **wish** — Child chooses how to make a wish (solo / with grown-up / with friend).
- * - **survey** — Quick check-in: rating, feedback, email, QR code for parent view.
+ * - **survey** — Quick check-in: rating + QR code for parent view.
  */
 export const DEMO_STEP_ORDER: DemoStep[] = [
   'tattleCard',
@@ -87,9 +87,6 @@ export function getFirstStep(
 
 export interface DemoSurvey {
   rating: 1 | 2 | 3 | 4 | 5 | null;
-  feedback: string;
-  email: string;
-  wantsFullVersion: boolean | null;
 }
 
 export interface DemoSession {
@@ -146,9 +143,6 @@ export function createFreshDemoSession(): DemoSession {
     missionStatus: 'none',
     survey: {
       rating: null,
-      feedback: '',
-      email: '',
-      wantsFullVersion: null,
     },
     demoTheme: 'dark',
     ageGroup: 'unknown',

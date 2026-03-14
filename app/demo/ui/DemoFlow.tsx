@@ -2298,134 +2298,45 @@ export default function DemoFlow() {
 
               {/* ---- survey ---- */}
               {step === 'survey' && (
-                <div style={{ display: 'grid', gap: 12, width: '100%' }}>
-                  <Card
-                    title="Quick check-in"
-                    right={<HelpIconButton aria-label="Why this quick survey?" onClick={() => setHelpSection('survey')} />}
-                  >
-                    <div style={{ display: 'grid', gap: 12 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 12, alignItems: 'center' }}>
-                        <div style={{ color: 'var(--v2-text-secondary)', fontSize: 13 }}>How did this feel?</div>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          {[
-                            { value: 1 as const, label: '\u{1F615}', title: 'Not quite right' },
-                            { value: 3 as const, label: '\u{1F642}', title: 'Nice start' },
-                            { value: 5 as const, label: '\u{1F929}', title: 'Loved it' },
-                          ].map((opt) => (
-                            <button
-                              key={opt.value}
-                              onClick={() => updateSession({ survey: { ...session.survey, rating: opt.value } })}
-                              style={{
-                                appearance: 'none',
-                                cursor: 'pointer',
-                                borderRadius: 999,
-                                padding: '8px 12px',
-                                border: session.survey.rating === opt.value
-                                  ? '2px solid rgba(140,120,255,0.95)'
-                                  : '1px solid rgba(255,255,255,0.14)',
-                                background:
-                                  session.survey.rating === opt.value ? 'rgba(140,120,255,0.22)' : 'rgba(255,255,255,0.05)',
-                                fontSize: 20,
-                                lineHeight: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                              aria-pressed={session.survey.rating === opt.value}
-                              title={opt.title}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 12 }}>
-                        <div style={{ color: 'var(--v2-text-secondary)', fontSize: 13 }}>Feedback</div>
-                        <textarea
-                          value={session.survey.feedback}
-                          onChange={(e) => updateSession({ survey: { ...session.survey, feedback: e.target.value } })}
-                          placeholder="What should we improve?"
-                          rows={4}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            borderRadius: 12,
-                            border: '1px solid rgba(255,255,255,0.14)',
-                            background: 'rgba(0,0,0,0.18)',
-                            color: 'var(--v2-text)',
-                            outline: 'none',
-                            resize: 'vertical',
-                          }}
-                        />
-                      </div>
-                      <InputRow
-                        label="Email (optional, for waitlist)"
-                        value={session.survey.email}
-                        placeholder="you@example.com"
-                        onChange={(v) => updateSession({ survey: { ...session.survey, email: v } })}
-                      />
-                      <SelectRow
-                        label="Try the full version when it's ready?"
-                        value={session.survey.wantsFullVersion === null ? 'maybe' : session.survey.wantsFullVersion ? 'yes' : 'no'}
-                        onChange={(v) =>
-                          updateSession({
-                            survey: {
-                              ...session.survey,
-                              wantsFullVersion: v === 'maybe' ? null : v === 'yes',
-                            },
-                          })
-                        }
-                        options={[
-                          { value: 'yes', label: 'Yes' },
-                          { value: 'no', label: 'No' },
-                          { value: 'maybe', label: 'Not sure' },
-                        ]}
-                      />
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)',
-                          gap: 16,
-                          alignItems: 'center',
-                        }}
-                      >
-                        <div style={{ display: 'grid', gap: 8 }}>
-                          <div style={{ color: 'var(--v2-text-secondary)', fontSize: 13 }}>
-                            Scan this on your phone to open the parent demo.
-                          </div>
-                          <div
+                <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 360, justifySelf: 'center' }}>
+                  <Card>
+                    <div style={{ display: 'grid', gap: 16, textAlign: 'center' }}>
+                      <div style={{ color: 'var(--v2-text-secondary)', fontSize: 15 }}>Did you enjoy talking to Shelly?</div>
+                      <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+                        {[
+                          { value: 1 as const, label: '\u{1F615}', title: 'Not quite right' },
+                          { value: 3 as const, label: '\u{1F642}', title: 'Nice start' },
+                          { value: 5 as const, label: '\u{1F929}', title: 'Loved it' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => updateSession({ survey: { ...session.survey, rating: opt.value } })}
                             style={{
-                              padding: 8,
-                              borderRadius: 16,
-                              border: '1px solid rgba(255,255,255,0.18)',
-                              background: 'rgba(0,0,0,0.28)',
-                              display: 'inline-flex',
+                              appearance: 'none',
+                              cursor: 'pointer',
+                              borderRadius: 999,
+                              width: 64,
+                              height: 64,
+                              padding: 0,
+                              border: session.survey.rating === opt.value
+                                ? '2.5px solid rgba(140,120,255,0.95)'
+                                : '1px solid rgba(255,255,255,0.14)',
+                              background:
+                                session.survey.rating === opt.value ? 'rgba(140,120,255,0.22)' : 'rgba(255,255,255,0.05)',
+                              fontSize: 36,
+                              lineHeight: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'transform 0.15s, border-color 0.15s',
+                              transform: session.survey.rating === opt.value ? 'scale(1.1)' : 'scale(1)',
                             }}
+                            aria-pressed={session.survey.rating === opt.value}
+                            title={opt.title}
                           >
-                            <QRCode
-                              value={
-                                typeof window !== 'undefined'
-                                  ? `${window.location.origin}/demo/parent?session=${session.demoId ?? ''}`
-                                  : '/demo/parent'
-                              }
-                              size={96}
-                              bgColor="transparent"
-                              fgColor="#F5F7FF"
-                            />
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: 'var(--v2-text-secondary)',
-                              wordBreak: 'break-all',
-                            }}
-                          >
-                            Session ID:{' '}
-                            <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                              {session.demoId || '\u2026'}
-                            </span>
-                          </div>
-                        </div>
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </Card>

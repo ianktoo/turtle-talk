@@ -58,6 +58,9 @@ export interface AdminDatabase {
           invited_by: string | null;
           approved_at: string | null;
           approved_by: string | null;
+          demo_id: string | null;
+          converted_user_id: string | null;
+          converted_at: string | null;
         },
         Record<string, unknown>,
         Record<string, unknown>

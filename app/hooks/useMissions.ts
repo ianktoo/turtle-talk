@@ -66,9 +66,15 @@ export function useMissions(childId?: string) {
       void db.completeMission(id, missionId).catch((err) => {
         console.error('[useMissions] completeMission failed', err);
       });
+      if (!isGuest) {
+        void fetch('/api/wishes/rounds/increment-missions', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => {});
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [id],
+    [id, isGuest],
   );
 
   const deleteMission = useCallback(

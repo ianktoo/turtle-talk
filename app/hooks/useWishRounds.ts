@@ -12,6 +12,8 @@ export interface WishRound {
   status: string;
   created_at: string;
   honoredOption?: WishRoundHonoredOption;
+  missions_required: number;
+  missions_completed: number;
 }
 
 export interface WishRoundOption {
@@ -24,6 +26,7 @@ export interface WishRoundOption {
 export interface UseWishRoundsResult {
   rounds: WishRound[];
   activeRoundOptions: WishRoundOption[] | undefined;
+  realizedCount: number;
   isLoading: boolean;
   refetch: () => Promise<void>;
 }
@@ -63,5 +66,7 @@ export function useWishRounds(): UseWishRoundsResult {
     refetch();
   }, [refetch]);
 
-  return { rounds, activeRoundOptions, isLoading, refetch };
+  const realizedCount = rounds.filter((r) => r.status === 'realized').length;
+
+  return { rounds, activeRoundOptions, realizedCount, isLoading, refetch };
 }

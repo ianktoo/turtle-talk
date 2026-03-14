@@ -9,13 +9,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      // Serve v2 as canonical routes (URL stays /, /garden, /talk, /missions, /wish-list)
+      // Serve v2 as canonical routes (URL stays /, /garden, /talk, /missions)
       { source: "/", destination: "/v2" },
       { source: "/garden", destination: "/v2/garden" },
       { source: "/talk", destination: "/v2/talk" },
       { source: "/missions", destination: "/v2/missions" },
-      { source: "/wish-list", destination: "/v2/wish-list" },
-      { source: "/conversation", destination: "/v2/conversation" },
     ];
   },
   async redirects() {
@@ -25,11 +23,13 @@ const nextConfig: NextConfig = {
       { source: "/v2/garden", destination: "/garden", permanent: true },
       { source: "/v2/talk", destination: "/talk", permanent: true },
       { source: "/v2/missions", destination: "/missions", permanent: true },
-      { source: "/v2/wish-list", destination: "/wish-list", permanent: true },
-      { source: "/v2/conversation", destination: "/conversation", permanent: true },
-      // Redirect old wish list routes to v2 canonical
-      { source: "/appreciation/wish-list", destination: "/wish-list", permanent: true },
-      { source: "/world/wish-list", destination: "/wish-list", permanent: true },
+      // Redirect old wish-list/conversation pages to garden (now modals)
+      { source: "/wish-list", destination: "/garden", permanent: true },
+      { source: "/v2/wish-list", destination: "/garden", permanent: true },
+      { source: "/conversation", destination: "/garden", permanent: true },
+      { source: "/v2/conversation", destination: "/garden", permanent: true },
+      { source: "/appreciation/wish-list", destination: "/garden", permanent: true },
+      { source: "/world/wish-list", destination: "/garden", permanent: true },
     ];
   },
 };
