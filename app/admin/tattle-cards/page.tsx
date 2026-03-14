@@ -59,6 +59,9 @@ export default function AdminTattleCardsPage() {
       ]);
       if (await checkResponseForInvalidSession(cardsRes)) return;
       if (await checkResponseForInvalidSession(settingsRes)) return;
+      if (!cardsRes.ok || !settingsRes.ok) {
+        throw new Error('Failed to load');
+      }
 
       const cardsData = await cardsRes.json();
       const settingsData = await settingsRes.json();
